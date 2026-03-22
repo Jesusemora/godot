@@ -152,7 +152,7 @@ void CSGShapeEditor::_create_baked_collision_shape() {
 	ur->commit_action();
 }
 
-void _rebuild_brush() {
+void CSGShapeEditor::_rebuild_brush() {
 	node->rebuild_brush();
 	// TODO Undo, Redo, Etc.
 }
@@ -178,7 +178,6 @@ CSGShapeEditor::CSGShapeEditor() {
 	rebuild_csg = memnew(Button);
 	rebuild_csg->hide();
 	rebuild_csg->set_text(TTR("REBUILD"));
-	rebuild_csg->set_switch_on_hover(true);
 	rebuild_csg->set_flat(false);
 	rebuild_csg->set_theme_type_variation("FlatMenuButton");
 	Node3DEditor::get_singleton()->add_control_to_menu_panel(rebuild_csg);
