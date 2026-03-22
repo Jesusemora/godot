@@ -1068,7 +1068,7 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	}
 }
 
-Dictionary CSGShape3D::get_csg_brush() const {
+Dictionary CSGShape3D::get_csg_brush() {
 	if (!brush) {
 		return Dictionary();
 	}
@@ -1123,7 +1123,10 @@ void CSGShape3D::set_csg_brush(const Dictionary &data) {
 
 	CSGBrush *n = memnew(CSGBrush);
 
-	int face_count = data["material_id"].size();
+	Vector<uint8_t> mat_id = data["material_id"];
+
+	int face_count = mat_id.size();
+	Object::cast_to<CSGShape3D>(p_node)
 
 	Vector<Vector3> faces = data["vertices"];
 	Vector<Vector2> uvs = data["uvs"];
@@ -1136,6 +1139,7 @@ void CSGShape3D::set_csg_brush(const Dictionary &data) {
 	invert.resize(face_count);
 
 	{
+		Vector<uint8_t> invrt = data["invert"];
 		Vector<uint8_t> smooth_i = data["smooth"];
 		Array mats = data["materials"];
 
@@ -1145,14 +1149,14 @@ void CSGShape3D::set_csg_brush(const Dictionary &data) {
 
 		for (int i = 0; i < face_count; i++) {
 			smoothw[i] = smooth_i[i] > 0;
-			int i_mat = data["material_id"][i];
+			int i_mat = mat_id[i];
 			if (i_mat < mats.size()) {
 				Ref<Material> t_mat = mats[i_mat];
 				if (t_mat.is_valid()) {
 					materialsw[i] = t_mat;
 				}
 			}
-			invertw[i] = data["invert"][i] > 0;
+			invertw[i] = invrt[i] > 0;
 		}
 	}
 
@@ -1181,7 +1185,7 @@ void CSGShape3D::rotate_uv(const Vector<int> &p_faces, const float angle) {
 		int p = p_faces[i];
 		ERR_FAIL_INDEX(p, n->faces.size());
 		for (int j = 0; j < 3; j++) {
-			n->faces.write[p].uvs[j] = faces[p].uvs[j] * p_rotation;
+			n->faces.write[p].uvs[j] = n->faces[p].uvs[j] * p_rotation;
 		}
 	}
 	_make_painted();

@@ -133,7 +133,7 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
-	Dictionary get_csg_brush() const;
+	Dictionary get_csg_brush();
 	void set_csg_brush(const Dictionary &data);
 	void rebuild_brush();
 
