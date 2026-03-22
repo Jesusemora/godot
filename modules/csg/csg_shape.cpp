@@ -1068,14 +1068,14 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	}
 }
 
-Dictionary CSGShape3D::get_csg_brush() {
+Dictionary CSGShape3D::get_csg_brush() const {
 	if (!brush) {
 		return Dictionary();
 	}
 
-	CSGBrush *n = _get_brush();
+	CSGBrush *n = brush;
 
-	Dictionary data;
+	Dictionary p_brush_data;
 	Vector<Vector3> vertices;
 	Vector<Vector2> uvs;
 	Vector<uint8_t> smooths;
@@ -1094,12 +1094,12 @@ Dictionary CSGShape3D::get_csg_brush() {
 		mat_id.push_back(n->faces[i].material);
 	}
 
-	data["vertices"] = vertices;
-	data["uvs"] = uvs;
+	p_brush_data["vertices"] = vertices;
+	p_brush_data["uvs"] = uvs;
 	// Replace with smooth groups in the future.
-	data["smooth"] = smooths;
-	data["invert"] = inverts;
-	data["material_id"] = mat_id;
+	p_brush_data["smooth"] = smooths;
+	p_brush_data["invert"] = inverts;
+	p_brush_data["material_id"] = mat_id;
 
 	for (int i = 0; i < n->materials.size(); i++) {
 		// TODO Make sure something is written in the space if the material is not valid.
@@ -1108,27 +1108,27 @@ Dictionary CSGShape3D::get_csg_brush() {
 		}
 	}
 
-	data["materials"] = materials;
+	p_brush_data["materials"] = materials;
 
-	return data;
+	return p_brush_data;
 }
 
-void CSGShape3D::set_csg_brush(const Dictionary &data) {
-	ERR_FAIL_COND(!data.has("material_id"));
-	ERR_FAIL_COND(!data.has("vertices"));
-	ERR_FAIL_COND(!data.has("uvs"));
-	ERR_FAIL_COND(!data.has("smooth"));
-	ERR_FAIL_COND(!data.has("invert"));
-	ERR_FAIL_COND(!data.has("materials"));
+void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
+	ERR_FAIL_COND(!p_brush_data.has("material_id"));
+	ERR_FAIL_COND(!p_brush_data.has("vertices"));
+	ERR_FAIL_COND(!p_brush_data.has("uvs"));
+	ERR_FAIL_COND(!p_brush_data.has("smooth"));
+	ERR_FAIL_COND(!p_brush_data.has("invert"));
+	ERR_FAIL_COND(!p_brush_data.has("materials"));
 
 	CSGBrush *n = memnew(CSGBrush);
 
-	Vector<uint8_t> mat_id = data["material_id"];
+	Vector<uint8_t> mat_id = p_brush_data["material_id"];
 
 	int face_count = mat_id.size();
 
-	Vector<Vector3> faces = data["vertices"];
-	Vector<Vector2> uvs = data["uvs"];
+	Vector<Vector3> faces = p_brush_data["vertices"];
+	Vector<Vector2> uvs = p_brush_data["uvs"];
 	Vector<bool> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
@@ -1138,9 +1138,9 @@ void CSGShape3D::set_csg_brush(const Dictionary &data) {
 	invert.resize(face_count);
 
 	{
-		Vector<uint8_t> invrt = data["invert"];
-		Vector<uint8_t> smooth_i = data["smooth"];
-		Array mats = data["materials"];
+		Vector<uint8_t> invrt = p_brush_data["invert"];
+		Vector<uint8_t> smooth_i = p_brush_data["smooth"];
+		Array mats = p_brush_data["materials"];
 
 		bool *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();

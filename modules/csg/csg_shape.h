@@ -133,8 +133,8 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
-	Dictionary get_csg_brush();
-	void set_csg_brush(const Dictionary &data);
+	Dictionary get_csg_brush() const;
+	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
 
 	void rotate_uv(const Vector<int> &p_faces, const float angle);
