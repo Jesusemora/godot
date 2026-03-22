@@ -1126,7 +1126,6 @@ void CSGShape3D::set_csg_brush(const Dictionary &data) {
 	Vector<uint8_t> mat_id = data["material_id"];
 
 	int face_count = mat_id.size();
-	Object::cast_to<CSGShape3D>(p_node)
 
 	Vector<Vector3> faces = data["vertices"];
 	Vector<Vector2> uvs = data["uvs"];
