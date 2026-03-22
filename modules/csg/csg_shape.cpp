@@ -1184,7 +1184,7 @@ void CSGShape3D::rotate_uv(const Vector<int> &p_faces, const float angle) {
 		int p = p_faces[i];
 		ERR_FAIL_INDEX(p, n->faces.size());
 		for (int j = 0; j < 3; j++) {
-			n->faces.write[p].uvs[j] = n->faces[p].uvs[j] * p_rotation;
+			n->faces.write[p].uvs[j] = p_rotation.xform(n->faces[p].uvs[j]);
 		}
 	}
 	_make_painted();
