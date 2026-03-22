@@ -275,7 +275,6 @@ void CSGShape3D::_make_painted() {
 		// With this we can replace most calls to _make_dirty().
 		_make_dirty();
 	}
-
 }
 
 enum ManifoldProperty {
