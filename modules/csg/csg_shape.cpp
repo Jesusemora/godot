@@ -262,6 +262,20 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 #endif // PHYSICS_3D_DISABLED
 
 	dirty = true;
+	notify_property_list_changed();
+}
+
+void CSGShape3D::_make_painted() {
+	// TODO Fix this mess.
+	if (!is_root_shape()) {
+		notify_property_list_changed();
+		// We force a rebuild of the parent shape only.
+		parent_shape->_make_dirty();
+	} else {
+		// With this we can replace most calls to _make_dirty().
+		_make_dirty();
+	}
+
 }
 
 enum ManifoldProperty {
@@ -936,7 +950,9 @@ void CSGShape3D::_notification(int p_what) {
 					root_mesh.unref();
 				}
 			}
-			if (!brush || parent_shape) {
+			if (parent_shape) {
+				_make_painted();
+			} else if (!brush) {
 				// Update this node if uninitialized, or both this node and its new parent if it gets added to another CSG shape
 				_make_dirty();
 			}
@@ -946,13 +962,14 @@ void CSGShape3D::_notification(int p_what) {
 		case NOTIFICATION_UNPARENTED: {
 			if (!is_root_shape()) {
 				// Update this node and its previous parent only if it's currently being removed from another CSG shape
+				// TODO investigate.
 				_make_dirty(true); // Must be forced since is_root_shape() uses the previous parent
 			}
 			parent_shape = nullptr;
 		} break;
 
 		case NOTIFICATION_CHILD_ORDER_CHANGED: {
-			_make_dirty();
+			_make_painted();
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
@@ -1009,7 +1026,7 @@ void CSGShape3D::_notification(int p_what) {
 
 void CSGShape3D::set_operation(Operation p_operation) {
 	operation = p_operation;
-	_make_dirty();
+	_make_painted();
 	update_gizmos();
 }
 
@@ -1050,6 +1067,125 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	} else if (is_collision_prefixed && !bool(get("use_collision"))) {
 		p_property.usage = PROPERTY_USAGE_NO_EDITOR;
 	}
+}
+
+Dictionary CSGShape3D::get_csg_brush() const {
+	if (!brush) {
+		return Dictionary();
+	}
+
+	CSGBrush *n = _get_brush();
+
+	Dictionary data;
+	Vector<Vector3> vertices;
+	Vector<Vector2> uvs;
+	Vector<uint8_t> smooths;
+	Vector<uint8_t> inverts;
+	Vector<uint8_t> mat_id;
+	Array materials;
+
+	for (int i = 0; i < n->faces.size(); i++) {
+		for (int j = 0; j < 3; j++) {
+			vertices.push_back(n->faces[i].vertices[j]);
+			uvs.push_back(n->faces[i].uvs[j]);
+		}
+
+		smooths.push_back(n->faces[i].smooth ? 1 : 0);
+		inverts.push_back(n->faces[i].invert ? 1 : 0);
+		mat_id.push_back(n->faces[i].material);
+	}
+
+	data["vertices"] = vertices;
+	data["uvs"] = uvs;
+	// Replace with smooth groups in the future.
+	data["smooth"] = smooths;
+	data["invert"] = inverts;
+	data["material_id"] = mat_id;
+
+	for (int i = 0; i < n->materials.size(); i++) {
+		// TODO Make sure something is written in the space if the material is not valid.
+		if (n->materials[i].is_valid()) {
+			materials.push_back(n->materials[i]);
+		}
+	}
+
+	data["materials"] = materials;
+
+	return data;
+}
+
+void CSGShape3D::set_csg_brush(const Dictionary &data) {
+	ERR_FAIL_COND(!data.has("material_id"));
+	ERR_FAIL_COND(!data.has("vertices"));
+	ERR_FAIL_COND(!data.has("uvs"));
+	ERR_FAIL_COND(!data.has("smooth"));
+	ERR_FAIL_COND(!data.has("invert"));
+	ERR_FAIL_COND(!data.has("materials"));
+
+	CSGBrush *n = memnew(CSGBrush);
+
+	int face_count = data["material_id"].size();
+
+	Vector<Vector3> faces = data["vertices"];
+	Vector<Vector2> uvs = data["uvs"];
+	Vector<bool> smooth;
+	Vector<Ref<Material>> materials;
+	Vector<bool> invert;
+
+	smooth.resize(face_count);
+	materials.resize(face_count);
+	invert.resize(face_count);
+
+	{
+		Vector<uint8_t> smooth_i = data["smooth"];
+		Array mats = data["materials"];
+
+		bool *smoothw = smooth.ptrw();
+		Ref<Material> *materialsw = materials.ptrw();
+		bool *invertw = invert.ptrw();
+
+		for (int i = 0; i < face_count; i++) {
+			smoothw[i] = smooth_i[i] > 0;
+			int i_mat = data["material_id"][i];
+			if (i_mat < mats.size()) {
+				Ref<Material> t_mat = mats[i_mat];
+				if (t_mat.is_valid()) {
+					materialsw[i] = t_mat;
+				}
+			}
+			invertw[i] = data["invert"][i] > 0;
+		}
+	}
+
+	n->build_from_faces(faces, uvs, smooth, materials, invert);
+
+	if (brush) {
+		memdelete(brush);
+	}
+
+	brush = n;
+}
+
+void CSGShape3D::rebuild_brush() {
+	_make_dirty();
+}
+
+void CSGShape3D::rotate_uv(const Vector<int> &p_faces, const float angle) {
+	CSGBrush *n = _get_brush();
+
+	if (n->faces.is_empty()) {
+		return;
+	}
+
+	Transform2D p_rotation = Transform2D(angle, Vector2(0.0, 0.0));
+	for (int i = 0; i < p_faces.size(); i++) {
+		int p = p_faces[i];
+		ERR_FAIL_INDEX(p, n->faces.size());
+		for (int j = 0; j < 3; j++) {
+			n->faces.write[p].uvs[j] = faces[p].uvs[j] * p_rotation;
+		}
+	}
+	_make_painted();
 }
 
 Array CSGShape3D::get_meshes() const {
@@ -1123,6 +1259,11 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_calculate_tangents", "enabled"), &CSGShape3D::set_calculate_tangents);
 	ClassDB::bind_method(D_METHOD("is_calculating_tangents"), &CSGShape3D::is_calculating_tangents);
 
+	ClassDB::bind_method(D_METHOD("set_csg_brush", "csg_brush"), &CSGShape3D::set_csg_brush);
+	ClassDB::bind_method(D_METHOD("get_csg_brush"), &CSGShape3D::get_csg_brush);
+
+	ClassDB::bind_method(D_METHOD("rotate_uv", "faces", "angle"), &CSGShape3D::rotate_uv);
+
 	ClassDB::bind_method(D_METHOD("get_meshes"), &CSGShape3D::get_meshes);
 
 	ClassDB::bind_method(D_METHOD("bake_static_mesh"), &CSGShape3D::bake_static_mesh);
@@ -1132,6 +1273,8 @@ void CSGShape3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_smoothing_angle", "smoothing_angle"), &CSGShape3D::set_smoothing_angle);
 	ClassDB::bind_method(D_METHOD("get_smoothing_angle"), &CSGShape3D::get_smoothing_angle);
+
+	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "_csg_brush", PROPERTY_HINT_NO_NODEPATH, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL), "set_csg_brush", "get_csg_brush");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autosmooth"), "set_autosmooth", "is_autosmooth");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "smoothing_angle", PROPERTY_HINT_RANGE, "0,180,0.1,degrees"), "set_smoothing_angle", "get_smoothing_angle");
@@ -1379,6 +1522,7 @@ void CSGMesh3D::set_material(const Ref<Material> &p_material) {
 		return;
 	}
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 }
 
@@ -1576,6 +1720,7 @@ void CSGSphere3D::_bind_methods() {
 void CSGSphere3D::set_radius(const float p_radius) {
 	ERR_FAIL_COND(p_radius <= 0);
 	radius = p_radius;
+	// TODO Make painted and add a method to change scale.
 	_make_dirty();
 	update_gizmos();
 }
@@ -1606,6 +1751,7 @@ int CSGSphere3D::get_rings() const {
 
 void CSGSphere3D::set_smooth_faces(const bool p_smooth_faces) {
 	smooth_faces = p_smooth_faces;
+	// TODO Make painted and change smooth of all faces.
 	_make_dirty();
 }
 
@@ -1615,6 +1761,7 @@ bool CSGSphere3D::get_smooth_faces() const {
 
 void CSGSphere3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 }
 
@@ -1745,6 +1892,7 @@ void CSGBox3D::_bind_methods() {
 
 void CSGBox3D::set_size(const Vector3 &p_size) {
 	size = p_size;
+	// TODO Make painted and add a method to change scale of CSGBrush.
 	_make_dirty();
 	update_gizmos();
 }
@@ -1779,6 +1927,7 @@ bool CSGBox3D::_set(const StringName &p_name, const Variant &p_value) {
 
 void CSGBox3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 	update_gizmos();
 }
@@ -1953,6 +2102,7 @@ void CSGCylinder3D::_bind_methods() {
 
 void CSGCylinder3D::set_radius(const float p_radius) {
 	radius = p_radius;
+	// TODO Make painted and add a method to change scale of CSGBrush.
 	_make_dirty();
 	update_gizmos();
 }
@@ -1963,6 +2113,7 @@ float CSGCylinder3D::get_radius() const {
 
 void CSGCylinder3D::set_height(const float p_height) {
 	height = p_height;
+	// TODO Make painted and add a method to change scale of CSGBrush.
 	_make_dirty();
 	update_gizmos();
 }
@@ -2003,6 +2154,7 @@ bool CSGCylinder3D::get_smooth_faces() const {
 
 void CSGCylinder3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 }
 
@@ -2229,6 +2381,7 @@ bool CSGTorus3D::get_smooth_faces() const {
 
 void CSGTorus3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 }
 
@@ -2889,6 +3042,7 @@ bool CSGPolygon3D::get_smooth_faces() const {
 
 void CSGPolygon3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
+	// TODO Make painted and add a method to change material of CSGBrush.
 	_make_dirty();
 }
 
