@@ -122,6 +122,7 @@ protected:
 	void _notification(int p_what);
 	virtual CSGBrush *_build_brush() = 0;
 	void _make_dirty(bool p_parent_removing = false);
+	void _make_painted();
 	PackedStringArray get_configuration_warnings() const override;
 
 	static void _bind_methods();
@@ -132,6 +133,12 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
+	Dictionary get_csg_brush() const;
+	void set_csg_brush(const Dictionary &p_brush_data);
+	void rebuild_brush();
+
+	void rotate_uv(const Vector<int> &p_faces, const float angle);
+
 	Array get_meshes() const;
 	void update_shape();
 

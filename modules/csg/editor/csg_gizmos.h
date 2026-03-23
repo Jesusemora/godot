@@ -71,12 +71,15 @@ class CSGShapeEditor : public Control {
 
 	CSGShape3D *node = nullptr;
 	MenuButton *options = nullptr;
+	Button *rebuild_csg = nullptr;
 	AcceptDialog *err_dialog = nullptr;
 
 	void _menu_option(int p_option);
 
 	void _create_baked_mesh_instance();
 	void _create_baked_collision_shape();
+
+	void _rebuild_brush();
 
 protected:
 	void _node_removed(Node *p_node);
