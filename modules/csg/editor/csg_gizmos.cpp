@@ -48,6 +48,7 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 	if (p_node == node) {
 		node = nullptr;
 		options->hide();
+		rebuild_csg->hide();
 	}
 }
 
@@ -55,8 +56,10 @@ void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 	node = p_csg_shape;
 	if (node) {
 		options->show();
+		rebuild_csg->show();
 	} else {
 		options->hide();
+		rebuild_csg->hide();
 	}
 }
 
@@ -179,7 +182,6 @@ CSGShapeEditor::CSGShapeEditor() {
 	rebuild_csg->hide();
 	rebuild_csg->set_text(TTR("REBUILD"));
 	rebuild_csg->set_flat(false);
-	rebuild_csg->set_theme_type_variation("FlatMenuButton");
 	Node3DEditor::get_singleton()->add_control_to_menu_panel(rebuild_csg);
 	rebuild_csg->connect(SceneStringName(pressed), callable_mp(this, &CSGShapeEditor::_rebuild_brush));
 }
