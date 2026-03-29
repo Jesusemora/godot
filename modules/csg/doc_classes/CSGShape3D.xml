@@ -57,7 +57,7 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="get_csg_brush" qualifiers="const">
+		<method name="get_csg_brush">
 			<return type="Dictionary" />
 			<description>
 				Returns the CSGBrush of the node as a [Dictionary] containing the following entries:
@@ -70,7 +70,7 @@
 				- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
 			</description>
 		</method>
-		<method name="get_face_material" qualifiers="const">
+		<method name="get_face_material">
 			<return type="Material" />
 			<param index="0" name="face" type="int" />
 			<description>
@@ -84,21 +84,21 @@
 				[b]Note:[/b] CSG mesh data updates are deferred, which means they are updated with a delay of one rendered frame. To avoid getting an empty shape or outdated mesh data, make sure to call [code]await get_tree().process_frame[/code] before using [method get_meshes] in [method Node._ready] or after changing properties on the [CSGShape3D].
 			</description>
 		</method>
-		<method name="get_uv_offsets" qualifiers="const">
+		<method name="get_uv_offsets">
 			<return type="Vector2" />
 			<param index="0" name="face" type="int" />
 			<description>
 				Returns the calculated offset of the UVs of the [param face] of the CSGBrush.
 			</description>
 		</method>
-		<method name="get_uv_scale" qualifiers="const">
+		<method name="get_uv_scale">
 			<return type="Vector2" />
 			<param index="0" name="face" type="int" />
 			<description>
 				Returns the calculated scale of the UVs of the [param face] of the CSGBrush.
 			</description>
 		</method>
-		<method name="get_vertices" qualifiers="const">
+		<method name="get_vertices">
 			<return type="PackedVector3Array" />
 			<description>
 				Returns a [PackedVector3Array] with the positions of the vertices of the CSGBrush. This method ignores duplicated positions and is intended to be used with [method set_vertex_position].
