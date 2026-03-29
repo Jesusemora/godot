@@ -1105,6 +1105,9 @@ Dictionary CSGShape3D::get_csg_brush() {
 	}
 
 	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return p_brush_data;
+	}
 
 	if (n->faces.size() <= 0) {
 		return p_brush_data;
@@ -1228,6 +1231,7 @@ void CSGShape3D::rebuild_brush() {
 void CSGShape3D::set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset) {
 	// Use the offset obtained from `get_uv_offsets` when selecting faces.
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1249,6 +1253,9 @@ Vector2 CSGShape3D::get_uv_offsets(int p_face) {
 	}
 
 	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return Vector2(0.0, 0.0);
+	}
 
 	if (n->faces.is_empty()) {
 		return Vector2(0.0, 0.0);
@@ -1274,6 +1281,7 @@ Vector2 CSGShape3D::get_uv_offsets(int p_face) {
 
 void CSGShape3D::set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_scale, const Vector2 &p_scale) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1311,6 +1319,9 @@ Vector2 CSGShape3D::get_uv_scale(int p_face) {
 	}
 
 	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return Vector2(1.0, 1.0);
+	}
 
 	if (n->faces.is_empty()) {
 		return Vector2(1.0, 1.0);
@@ -1339,6 +1350,7 @@ Vector2 CSGShape3D::get_uv_scale(int p_face) {
 
 void CSGShape3D::rotate_uv(const Vector<int> &p_faces, const float angle) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1357,6 +1369,7 @@ void CSGShape3D::rotate_uv(const Vector<int> &p_faces, const float angle) {
 
 void CSGShape3D::flip_x(const Vector<int> &p_faces) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1377,6 +1390,7 @@ void CSGShape3D::flip_x(const Vector<int> &p_faces) {
 
 void CSGShape3D::flip_y(const Vector<int> &p_faces) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1408,6 +1422,9 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 	}
 
 	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return true;
+	}
 
 	if (n->faces.is_empty()) {
 		return false;
@@ -1428,6 +1445,7 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 void CSGShape3D::set_csg_flat(bool p_mode) {
 	// This changes all faces so it can't be used with CSGCylinder3D.
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1441,6 +1459,7 @@ void CSGShape3D::set_csg_flat(bool p_mode) {
 
 void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1475,6 +1494,9 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 Ref<Material> CSGShape3D::get_face_material(int p_face) {
 	// Using only one face as only one material will be returned.
 	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return nullptr;
+	}
 
 	if (n->faces.is_empty()) {
 		return nullptr;
@@ -1498,6 +1520,10 @@ Vector<Vector3> CSGShape3D::get_vertices() {
 
 	Vector<Vector3> vertices;
 
+	if (n == nullptr) {
+		return vertices;
+	}
+
 	for (int i = 0; i < n->faces.size(); i++) {
 		for (int j = 0; j < 3; j++) {
 			Vector3 v = n->faces[i].vertices[j];
@@ -1513,6 +1539,7 @@ Vector<Vector3> CSGShape3D::get_vertices() {
 
 void CSGShape3D::set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos) {
 	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
