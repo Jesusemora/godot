@@ -1494,7 +1494,7 @@ Ref<Material> CSGShape3D::get_face_material(int p_face) {
 
 Vector<Vector3> CSGShape3D::get_vertices() {
 	// Use this for making a vertex editor.
-	CSGBox3D *n = _get_brush();
+	CSGBrush *n = _get_brush();
 
 	Vector<Vector3> vertices;
 
