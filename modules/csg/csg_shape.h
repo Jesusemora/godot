@@ -65,6 +65,8 @@ private:
 	AABB node_aabb;
 
 	bool dirty = false;
+	bool painted = false;
+	bool first_go = true;
 	bool last_visible = false;
 	float snap = 0.001;
 
@@ -122,7 +124,8 @@ protected:
 	void _notification(int p_what);
 	virtual CSGBrush *_build_brush() = 0;
 	void _make_dirty(bool p_parent_removing = false);
-	void _make_painted();
+	void _make_painted(bool p_paint = false);
+	void _allow_editing();
 	PackedStringArray get_configuration_warnings() const override;
 
 	static void _bind_methods();
@@ -137,7 +140,19 @@ public:
 	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
 
+	void set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset);
+	Vector2 get_uv_offsets(int p_face) const;
+	void set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_scale, const Vector2 &p_scale);
+	Vector2 get_uv_scale(int p_face) const;
 	void rotate_uv(const Vector<int> &p_faces, const float angle);
+	void flip_x(const Vector<int> &p_faces);
+	void flip_y(const Vector<int> &p_faces);
+	bool resize_brush(const Vector3 &prev_size, const Vector3 &p_size);
+	void set_csg_flat(bool p_mode);
+	void set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material);
+	Ref<Material> get_face_material(int p_face) const;
+	Vector<Vector3> get_vertices() const;
+	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
 
 	Array get_meshes() const;
 	void update_shape();
