@@ -272,7 +272,7 @@ void CSGShape3D::_make_painted(bool p_paint) {
 	} else if (!is_root_shape()) {
 		painted = painted || p_paint;
 		if (!painted && !p_paint) {
-			_make_dirty;
+			_make_dirty();
 			return;
 		}
 		notify_property_list_changed();
@@ -284,7 +284,7 @@ void CSGShape3D::_make_painted(bool p_paint) {
 	}
 }
 
-void _allow_editing() {
+void CSGShape3D::_allow_editing() {
 	first_go = false;
 }
 
@@ -503,38 +503,6 @@ struct ManifoldOperation {
 			manifold(m), operation(op) {}
 };
 
-static void _recursive_manifold(
-		std::vector<manifold::Manifold> &p_manifolds,
-		manifold::OpType &p_current_op,
-		HashMap<int32_t, Ref<Material>> &p_mesh_materials,
-		CSGShape3D *p_csg_shape) {
-	for (int i = 0; i < p_csg_shape->get_child_count(); i++) {
-		CSGShape3D *child = Object::cast_to<CSGShape3D>(p_csg_shape->get_child(i));
-		if (!child || !child->is_visible()) {
-			continue;
-		}
-		CSGBrush *child_brush = child->_get_brush();
-		if (!child_brush) {
-			continue;
-		}
-		CSGBrush transformed_brush;
-		transformed_brush.copy_from(*child_brush, child->get_transform());
-		manifold::Manifold child_manifold;
-		_pack_manifold(&transformed_brush, child_manifold, p_mesh_materials, child);
-		manifold::OpType child_operation = ManifoldOperation::convert_csg_op(child->get_operation());
-		if (child_operation != p_current_op) {
-			manifold::Manifold result = manifold::Manifold::BatchBoolean(p_manifolds, p_current_op);
-			p_manifolds.clear();
-			p_manifolds.push_back(result);
-			p_current_op = child_operation;
-		}
-		p_manifolds.push_back(child_manifold);
-		if (child->get_child_count() > 0) {
-			_recursive_manifold(p_manifolds, p_current_op, p_mesh_materials, child);
-		}
-	}
-}
-
 CSGBrush *CSGShape3D::_get_brush() {
 	if (!dirty) {
 		return brush;
@@ -573,9 +541,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 				current_op = child_operation;
 			}
 			manifolds.push_back(child_manifold);
-			if (child->get_child_count() > 0) {
-				_recursive_manifold(manifolds, current_op, mesh_materials, child);
-			}
+			// TODO Get children recursively. This is only going to work with siblings for now.
 		}
 		if (!manifolds.empty()) {
 			manifold::Manifold manifold_result = manifold::Manifold::BatchBoolean(manifolds, current_op);
@@ -1119,7 +1085,7 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	}
 }
 
-Dictionary CSGShape3D::get_csg_brush() const {
+Dictionary CSGShape3D::get_csg_brush() {
 	Dictionary p_brush_data;
 	p_brush_data["painted"] = painted;
 
@@ -1127,7 +1093,7 @@ Dictionary CSGShape3D::get_csg_brush() const {
 		return p_brush_data;
 	}
 
-	if (is_root_shape) {
+	if (is_root_shape()) {
 		// Ideally, we want to rebuild the brush to undo any manifold operations.
 		// Changes on parents of nested shapes would be undone, it would be best if all shapes were siblings.
 		return p_brush_data;
@@ -1138,7 +1104,7 @@ Dictionary CSGShape3D::get_csg_brush() const {
 		return p_brush_data;
 	}
 
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.size() <= 0) {
 		return p_brush_data;
@@ -1277,18 +1243,21 @@ void CSGShape3D::set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_
 	_make_painted(true);
 }
 
-Vector2 CSGShape3D::get_uv_offsets(int p_face) const {
+Vector2 CSGShape3D::get_uv_offsets(int p_face) {
 	if (!brush) {
 		return Vector2(0.0, 0.0);
 	}
 
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.is_empty()) {
-		return;
+		return Vector2(0.0, 0.0);
 	}
 
-	ERR_FAIL_INDEX(p_face, n->faces.size());
+	if (p_face > n->faces.size() || p_face < 0) {
+		return Vector2(0.0, 0.0);
+	}
+
 	Vector2 smallest = n->faces[p_face].uvs[0];
 
 	for (int j = 1; j < 3; j++) {
@@ -1316,14 +1285,14 @@ void CSGShape3D::set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_sc
 		return;
 	}
 
-	if (prev_scale == 0.0 || prev_scale == 0.0) {
+	if (prev_scale.x == 0.0 || prev_scale.y == 0.0) {
 		// We fix this mess.
-		ERR_PRINT("Scale is ZERO, rebuilding shape.")
+		ERR_PRINT("Scale is ZERO, rebuilding shape.");
 		_make_dirty();
 		return;
 	}
 
-	Vector2 offset = get_uv_offsets(p_faces);
+	Vector2 offset = get_uv_offsets(p_faces[0]);
 	Vector2 n_scale = p_scale / prev_scale;
 
 	for (int i = 0; i < p_faces.size(); i++) {
@@ -1336,19 +1305,22 @@ void CSGShape3D::set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_sc
 	_make_painted(true);
 }
 
-Vector2 CSGShape3D::get_uv_scale(int p_face) const {
+Vector2 CSGShape3D::get_uv_scale(int p_face) {
 	if (!brush) {
 		return Vector2(1.0, 1.0);
 	}
 
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.is_empty()) {
-		return;
+		return Vector2(1.0, 1.0);
 	}
 
 	Vector2 offset = get_uv_offsets(p_face);
-	ERR_FAIL_INDEX(p_face, n->faces.size());
+	if (p_face > n->faces.size() || p_face < 0) {
+		return Vector2(1.0, 1.0);
+	}
+
 	Vector2 largest = n->faces[p_face].uvs[0] - offset;
 	largest.x = Math::abs(largest.x);
 	largest.y = Math::abs(largest.y);
@@ -1435,7 +1407,7 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 		return false;
 	}
 
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.is_empty()) {
 		return false;
@@ -1455,7 +1427,7 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 
 void set_csg_flat(bool p_mode) {
 	// This changes all faces so it can't be used with CSGCylinder3D.
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.is_empty()) {
 		return;
@@ -1484,8 +1456,8 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 		}
 		if (find_mat == -2) {
 			// TODO Replace unused materials.
-			find_mat = materials.size();
-			materials.push_back(p_material);
+			find_mat = n->materials.size();
+			n->materials.push_back(p_material);
 		}
 	} else {
 		find_mat = -1;
@@ -1500,15 +1472,18 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 	_make_painted(true);
 }
 
-Ref<Material> CSGShape3D::get_face_material(int p_face) const {
+Ref<Material> CSGShape3D::get_face_material(int p_face) {
 	// Using only one face as only one material will be returned.
-	CSGBrush *n = brush;
+	CSGBrush *n = _get_brush();
 
 	if (n->faces.is_empty()) {
 		return nullptr;
 	}
 
-	ERR_FAIL_INDEX(p_face, n->faces.size());
+	if (p_face > n->faces.size() || p_face < 0) {
+		return nullptr;
+	}
+
 	int mat = n->faces[p_face].material;
 	if (mat < 0) {
 		// mat can be -1
@@ -1517,9 +1492,9 @@ Ref<Material> CSGShape3D::get_face_material(int p_face) const {
 	return n->materials[mat];
 }
 
-Vector<Vector3> CSGShape3D::get_vertices() const {
+Vector<Vector3> CSGShape3D::get_vertices() {
 	// Use this for making a vertex editor.
-	CSGBox3D *n = brush;
+	CSGBox3D *n = _get_brush();
 
 	Vector<Vector3> vertices;
 

@@ -136,22 +136,22 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
-	Dictionary get_csg_brush() const;
+	Dictionary get_csg_brush();
 	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
 
 	void set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset);
-	Vector2 get_uv_offsets(int p_face) const;
+	Vector2 get_uv_offsets(int p_face);
 	void set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_scale, const Vector2 &p_scale);
-	Vector2 get_uv_scale(int p_face) const;
+	Vector2 get_uv_scale(int p_face);
 	void rotate_uv(const Vector<int> &p_faces, const float angle);
 	void flip_x(const Vector<int> &p_faces);
 	void flip_y(const Vector<int> &p_faces);
 	bool resize_brush(const Vector3 &prev_size, const Vector3 &p_size);
 	void set_csg_flat(bool p_mode);
 	void set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material);
-	Ref<Material> get_face_material(int p_face) const;
-	Vector<Vector3> get_vertices() const;
+	Ref<Material> get_face_material(int p_face);
+	Vector<Vector3> get_vertices();
 	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
 
 	Array get_meshes() const;
