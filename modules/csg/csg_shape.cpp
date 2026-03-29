@@ -1425,7 +1425,7 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 	return true;
 }
 
-void set_csg_flat(bool p_mode) {
+void CSGShape3D::set_csg_flat(bool p_mode) {
 	// This changes all faces so it can't be used with CSGCylinder3D.
 	CSGBrush *n = _get_brush();
 
