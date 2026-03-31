@@ -66,7 +66,6 @@ private:
 
 	bool dirty = false;
 	bool painted = false;
-	bool first_go = true;
 	bool last_visible = false;
 	float snap = 0.001;
 
@@ -125,7 +124,6 @@ protected:
 	virtual CSGBrush *_build_brush() = 0;
 	void _make_dirty(bool p_parent_removing = false);
 	void _make_painted(bool p_paint = false);
-	void _allow_editing();
 	PackedStringArray get_configuration_warnings() const override;
 
 	static void _bind_methods();
@@ -136,6 +134,7 @@ protected:
 	void _validate_property(PropertyInfo &p_property) const;
 
 public:
+	void get_csg_children_recursive(Vector<CSGShape3D *> &p_nodes);
 	Dictionary get_csg_brush();
 	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
@@ -153,6 +152,8 @@ public:
 	Ref<Material> get_face_material(int p_face);
 	Vector<Vector3> get_vertices();
 	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
+	void calculate_cube_map(const Vector<int> &p_faces);
+	Vector<Vector3> get_selected_faces(const Vector<int> &p_faces);
 
 	Array get_meshes() const;
 	void update_shape();
