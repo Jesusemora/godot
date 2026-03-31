@@ -266,7 +266,7 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 	notify_property_list_changed();
 }
 
-void CSGShape3D::_make_painted(bool p_paint = false) {
+void CSGShape3D::_make_painted(bool p_paint) {
 	if (!brush) {
 		_make_dirty();
 	} else if (!is_root_shape()) {
@@ -1077,7 +1077,7 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	}
 }
 
-void get_csg_children_recursive(Vector<CSGShape3D *> &p_nodes) {
+void CSGShape3D::get_csg_children_recursive(Vector<CSGShape3D *> &p_nodes) {
 	for (int i = 0; i < get_child_count(); i++) {
 		CSGShape3D *child = Object::cast_to<CSGShape3D>(get_child(i));
 		if (!child || !child->is_visible()) {
@@ -1607,7 +1607,9 @@ Vector<Vector3> CSGShape3D::get_selected_faces(const Vector<int> &p_faces) {
 
 	for (int i = 0; i < p_faces.size(); i++) {
 		int p = p_faces[i];
-		ERR_FAIL_INDEX(p, n->faces.size());
+		if (p > n->faces.size() || p < 0) {
+			continue;
+		}
 		for (int j = 0; j < 3; j++) {
 			ret.push_back(n->faces[p].vertices[j]);
 		}
