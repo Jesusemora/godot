@@ -29,6 +29,13 @@
 				[b]Note:[/b] CSG mesh data updates are deferred, which means they are updated with a delay of one rendered frame. To avoid getting an empty mesh or outdated mesh data, make sure to call [code]await get_tree().process_frame[/code] before using [method bake_static_mesh] in [method Node._ready] or after changing properties on the [CSGShape3D].
 			</description>
 		</method>
+		<method name="calculate_cube_map">
+			<return type="void" />
+			<param index="0" name="faces" type="PackedInt32Array" />
+			<description>
+				Generates cube map UVs for the selected faces. This is a simple unwrapping that calculates the UVs based on the direction of the face.
+			</description>
+		</method>
 		<method name="flip_x">
 			<return type="void" />
 			<param index="0" name="faces" type="PackedInt32Array" />
@@ -82,6 +89,13 @@
 			<description>
 				Returns an [Array] with two elements, the first is the [Transform3D] of this node and the second is the root [Mesh] of this node. Only works when this node is the root shape.
 				[b]Note:[/b] CSG mesh data updates are deferred, which means they are updated with a delay of one rendered frame. To avoid getting an empty shape or outdated mesh data, make sure to call [code]await get_tree().process_frame[/code] before using [method get_meshes] in [method Node._ready] or after changing properties on the [CSGShape3D].
+			</description>
+		</method>
+		<method name="get_selected_faces">
+			<return type="PackedVector3Array" />
+			<param index="0" name="faces" type="PackedInt32Array" />
+			<description>
+				Returns the vertices used to generate the selected faces. This is intended for generating a mesh to display the selected faces in the editor.
 			</description>
 		</method>
 		<method name="get_uv_offsets">
@@ -172,9 +186,9 @@
 			<return type="void" />
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<param index="1" name="prev_offset" type="Vector2" />
-			<param index="2" name="offset" type="Vector2" />
+			<param index="2" name="p_offset" type="Vector2" />
 			<description>
-				Sets the UVs of [param faces] of the CSGBrush using [param offset].
+				Sets the UVs of [param faces] of the CSGBrush using [param p_offset].
 				Usage:
 				[code]
 				# Offset the first and second faces of CSGBrush.
@@ -186,15 +200,15 @@
 			<return type="void" />
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<param index="1" name="prev_scale" type="Vector2" />
-			<param index="2" name="scale" type="Vector2" />
+			<param index="2" name="p_scale" type="Vector2" />
 			<description>
-				Sets the UVs of [param faces] of the CSGBrush using [param scale].
+				Sets the UVs of [param faces] of the CSGBrush using [param p_scale].
 				Usage:
 				[code]
 				# Scale the first and second faces of CSGBrush.
 				set_uv_scale(PackedInt32Array(0, 1), get_uv_scale(PackedInt32Array(0, 1)), Vector2(2.0, 2.0))
 				[/code]
-				Note: The values of scale can never be ZERO.
+				Note: The values of p_scale can never be ZERO.
 			</description>
 		</method>
 		<method name="set_vertex_position">
