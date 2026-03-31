@@ -55,7 +55,11 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 	node = p_csg_shape;
 	if (node) {
-		options->show();
+		if (node->is_root_shape()) {
+			options->show();
+		} else {
+			options->hide();
+		}
 		rebuild_csg->show();
 	} else {
 		options->hide();
@@ -502,11 +506,7 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 void EditorPluginCSG::edit(Object *p_object) {
 	CSGShape3D *csg_shape = Object::cast_to<CSGShape3D>(p_object);
-	if (csg_shape && csg_shape->is_root_shape()) {
-		csg_shape_editor->edit(csg_shape);
-	} else {
-		csg_shape_editor->edit(nullptr);
-	}
+	csg_shape_editor->edit(csg_shape);
 }
 
 bool EditorPluginCSG::handles(Object *p_object) const {
