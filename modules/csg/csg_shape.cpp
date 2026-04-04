@@ -266,8 +266,11 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 	notify_property_list_changed();
 }
 
-void CSGShape3D::_make_painted(bool p_paint) {
-	if (!brush) {
+void CSGShape3D::_make_painted(bool p_paint, bool p_parent_removing) {
+	if (p_parent_removing) {
+		// Why won't you work?
+		callable_mp(this, &CSGShape3D::update_shape).call_deferred();
+	} else if (!brush) {
 		_make_dirty();
 	} else if (!is_root_shape()) {
 		if (!painted && !p_paint) {
@@ -512,7 +515,9 @@ CSGBrush *CSGShape3D::_get_brush() {
 		// CSG tree must iterate over all shapes, but we gain the ability to edit parent brushes and save them in their base form.
 		HashMap<int32_t, Ref<Material>> mesh_materials;
 		manifold::Manifold root_manifold;
-		_pack_manifold(n, root_manifold, mesh_materials, this);
+		CSGBrush trans_root;
+		trans_root.copy_from(*n, get_global_transform());
+		_pack_manifold(&trans_root, root_manifold, mesh_materials, this);
 		manifold::OpType current_op = ManifoldOperation::convert_csg_op(get_operation());
 		std::vector<manifold::Manifold> manifolds;
 		manifolds.push_back(root_manifold);
@@ -525,7 +530,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 				continue;
 			}
 			CSGBrush transformed_brush;
-			transformed_brush.copy_from(*child_brush, child->get_transform());
+			transformed_brush.copy_from(*child_brush, child->get_global_transform()); // Changing this to global for nested nodes. We now need to transform the root shape too.
 			manifold::Manifold child_manifold;
 			_pack_manifold(&transformed_brush, child_manifold, mesh_materials, child);
 			manifold::OpType child_operation = ManifoldOperation::convert_csg_op(child->get_operation());
@@ -960,9 +965,6 @@ void CSGShape3D::_notification(int p_what) {
 			}
 			if (parent_shape) {
 				_make_painted();
-			} else if (!brush) {
-				// Update this node if uninitialized, or both this node and its new parent if it gets added to another CSG shape
-				_make_dirty();
 			}
 			last_visible = is_visible();
 		} break;
@@ -971,7 +973,7 @@ void CSGShape3D::_notification(int p_what) {
 			if (!is_root_shape()) {
 				// Update this node and its previous parent only if it's currently being removed from another CSG shape
 				// TODO investigate.
-				_make_dirty(true); // Must be forced since is_root_shape() uses the previous parent
+				_make_painted(false, true); // Must be forced since is_root_shape() uses the previous parent
 			}
 			parent_shape = nullptr;
 		} break;
@@ -1218,6 +1220,7 @@ void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 	brush = n;
 
 	dirty = false;
+	_make_painted(true);
 }
 
 void CSGShape3D::rebuild_brush() {
@@ -1406,6 +1409,15 @@ void CSGShape3D::flip_y(const Vector<int> &p_faces) {
 }
 
 bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
+	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return true;
+	}
+
+	if (n->faces.is_empty()) {
+		return false;
+	}
+
 	if (prev_size.x == 0.0 || prev_size.y == 0.0 || prev_size.z == 0.0) {
 		ERR_PRINT("size can NEVER be ZERO!");
 		_make_dirty();
@@ -1414,15 +1426,6 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 
 	if (p_size.x == 0.0 || p_size.y == 0.0 || p_size.z == 0.0) {
 		ERR_PRINT("size can NEVER be ZERO");
-		return false;
-	}
-
-	CSGBrush *n = _get_brush();
-	if (n == nullptr) {
-		return true;
-	}
-
-	if (n->faces.is_empty()) {
 		return false;
 	}
 
@@ -1483,6 +1486,40 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 		ERR_FAIL_INDEX(p, n->faces.size());
 		n->faces.write[p].material = find_mat;
 	}
+
+	{
+		Vector<Ref<Material>> nmats;
+		Vector<int> minds;
+		minds.resize(n->faces.size());
+		int k = 0;
+		for (int i = 0; i < n->materials.size(); i++) {
+			bool is_material_used = false;
+			for (int j = 0; j < n->faces.size(); j++) {
+				if (n->faces[j].material == i) {
+					minds[j] = k;
+					is_material_used = true;
+				}
+			}
+			if (is_material_used) {
+				nmats.push_back(n->materials[i]);
+				k++;
+			}
+		}
+
+		for (int i = 0; i < n->faces.size(); i++) {
+			if (n->faces[i].material == -1) {
+				n->faces.write[i].material = -1;
+			} else {
+				n->faces.write[i].material = minds[i];
+			}
+		}
+
+		n->materials.resize(nmats.size());
+		for (int i = 0; i < nmats.size(); i++) {
+			n->materials.write[i] = nmats[i];
+		}
+	}
+
 	// TODO make a different method for setting material for the whole shape.
 	_make_painted(true);
 }
@@ -1560,6 +1597,9 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 		return;
 	}
 
+	// 3D goes bot to top while 2D goes top to bottom.
+	Transform2D p_rotation = Transform2D(Math::deg_to_rad(180.0), Vector2(0.0, 0.0));
+
 	for (int i = 0; i < p_faces.size(); i++) {
 		int p = p_faces[i];
 		ERR_FAIL_INDEX(p, n->faces.size());
@@ -1573,19 +1613,22 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 
 		if (nor.x > nor.y && nor.x > nor.z) {
 			// Direction X, ZY.
-			n->faces.write[p].uvs[0] = Vector2(v1.z, v1.y);
-			n->faces.write[p].uvs[1] = Vector2(v2.z, v2.y);
-			n->faces.write[p].uvs[2] = Vector2(v3.z, v3.y);
+			float mir_x = ang.normal.x < 0.0 ? -1.0 : 0.0;
+			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(mir_x * v1.z, v1.y));
+			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(mir_x * v2.z, v2.y));
+			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.z, v3.y));
 		} else if (nor.y > nor.z) {
 			// Direction Y, XZ.
-			n->faces.write[p].uvs[0] = Vector2(v1.x, v1.z);
-			n->faces.write[p].uvs[1] = Vector2(v2.x, v2.z);
-			n->faces.write[p].uvs[2] = Vector2(v3.x, v3.z);
+			float mir_x = ang.normal.y < 0.0 ? -1.0 : 0.0;
+			n->faces.write[p].uvs[0] = Vector2(mir_x * v1.x, v1.z);
+			n->faces.write[p].uvs[1] = Vector2(mir_x * v2.x, v2.z);
+			n->faces.write[p].uvs[2] = Vector2(mir_x * v3.x, v3.z);
 		} else {
 			// Direction Z, XY.
-			n->faces.write[p].uvs[0] = Vector2(v1.x, v1.y);
-			n->faces.write[p].uvs[1] = Vector2(v2.x, v2.y);
-			n->faces.write[p].uvs[2] = Vector2(v3.x, v3.y);
+			float mir_x = ang.normal.z < 0.0 ? -1.0 : 0.0;
+			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(mir_x * v1.x, v1.y));
+			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(mir_x * v2.x, v2.y));
+			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.x, v3.y));
 		}
 	}
 	_make_painted(true);
@@ -1608,6 +1651,7 @@ Vector<Vector3> CSGShape3D::get_selected_faces(const Vector<int> &p_faces) {
 	for (int i = 0; i < p_faces.size(); i++) {
 		int p = p_faces[i];
 		if (p > n->faces.size() || p < 0) {
+			ERR_PRINT("Invalid face in p_faces");
 			continue;
 		}
 		for (int j = 0; j < 3; j++) {
@@ -1615,6 +1659,82 @@ Vector<Vector3> CSGShape3D::get_selected_faces(const Vector<int> &p_faces) {
 		}
 	}
 	return ret;
+}
+
+Vector<Vector3> CSGShape3D::get_csg_faces_anchor_points() {
+	// Returns the center of each face for displaying anchors. The original idea was for faces to be clicked on, but that might require too much work, and CSGs don't have that many faces anyway, fewer when ngons are implemented.
+	// This can be modified to display center of ngons in the future.
+	CSGBrush *n = _get_brush();
+
+	Vector<Vector3> ret;
+
+	if (n == nullptr) {
+		return ret;
+	}
+
+	if (n->faces.is_empty()) {
+		return ret;
+	}
+
+	for (int i = 0; i < n->faces.size(); i++) {
+		// TODO replace with ngons.
+		Vector3 aprox_pos = Vector3(0, 0, 0);
+		for (int j = 0; j < 3; j++) {
+			aprox_pos += n->faces[i].vertices[j];
+		}
+		aprox_pos /= 3;
+		ret.push_back(aprox_pos);
+	}
+	return ret;
+}
+
+int CSGShape3D::get_csg_num_faces() {
+	CSGBrush *n = _get_brush();
+
+	if (n == nullptr) {
+		return 0;
+	}
+
+	return n->faces.size();
+}
+
+void CSGShape3D::set_csg_face_smooth(const Vector<int> &p_faces bool p_smooth) {
+	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
+
+	if (n->faces.is_empty()) {
+		return;
+	}
+
+	for (int i = 0; i < p_faces.size(); i++) {
+		int p = p_faces[i];
+		ERR_FAIL_INDEX(p, n->faces.size());
+		for (int j = 0; j < 3; j++) {
+			n->faces.write[p].smooth = p_smooth;
+		}
+	}
+	_make_painted(true);
+}
+
+bool CSGShape3D::is_csg_face_smooth(int p_face) {
+	if (!brush) {
+		return false;
+	}
+
+	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return false;
+	}
+
+	if (n->faces.is_empty()) {
+		return false;
+	}
+
+	if (p_face > n->faces.size() || p_face < 0) {
+		return false;
+	}
+
+	return n->faces[p_face].smooth;
 }
 
 Array CSGShape3D::get_meshes() const {
@@ -1706,6 +1826,8 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_vertex_position", "from", "to"), &CSGShape3D::set_vertex_position);
 	ClassDB::bind_method(D_METHOD("calculate_cube_map", "faces"), &CSGShape3D::calculate_cube_map);
 	ClassDB::bind_method(D_METHOD("get_selected_faces", "faces"), &CSGShape3D::get_selected_faces);
+	ClassDB::bind_method(D_METHOD("get_csg_faces_anchor_points"), &CSGShape3D::get_csg_faces_anchor_points);
+	ClassDB::bind_method(D_METHOD("get_csg_num_faces"), &CSGShape3D::get_csg_num_faces);
 
 	ClassDB::bind_method(D_METHOD("get_meshes"), &CSGShape3D::get_meshes);
 
@@ -2161,7 +2283,9 @@ void CSGSphere3D::_bind_methods() {
 
 void CSGSphere3D::set_radius(const float p_radius) {
 	ERR_FAIL_COND(p_radius <= 0);
-	if (resize_brush(Vector3(radius, radius, radius), Vector3(p_radius, p_radius, p_radius))) {
+	if (!painted) {
+		radius = p_radius;
+	} else if (resize_brush(Vector3(radius, radius, radius), Vector3(p_radius, p_radius, p_radius))) {
 		radius = p_radius;
 	}
 	_make_painted();
@@ -2333,7 +2457,9 @@ void CSGBox3D::_bind_methods() {
 }
 
 void CSGBox3D::set_size(const Vector3 &p_size) {
-	if (resize_brush(size, p_size)) {
+	if (!painted) {
+		size = p_size;
+	} else if (resize_brush(size, p_size)) {
 		size = p_size;
 	}
 	_make_painted();
@@ -2543,7 +2669,9 @@ void CSGCylinder3D::_bind_methods() {
 }
 
 void CSGCylinder3D::set_radius(const float p_radius) {
-	if (resize_brush(Vector3(radius, 1.0, radius), Vector3(p_radius, 1.0, p_radius))) {
+	if (!painted) {
+		radius = p_radius;
+	} else if (resize_brush(Vector3(radius, 1.0, radius), Vector3(p_radius, 1.0, p_radius))) {
 		radius = p_radius;
 	}
 	_make_painted();
@@ -2555,7 +2683,9 @@ float CSGCylinder3D::get_radius() const {
 }
 
 void CSGCylinder3D::set_height(const float p_height) {
-	if (resize_brush(Vector3(1.0, height, 1.0), Vector3(1.0, p_height, 1.0))) {
+	if (!painted) {
+		height = p_height;
+	} else if (resize_brush(Vector3(1.0, height, 1.0), Vector3(1.0, p_height, 1.0))) {
 		height = p_height;
 	}
 	_make_painted();

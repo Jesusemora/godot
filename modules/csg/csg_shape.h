@@ -123,7 +123,7 @@ protected:
 	void _notification(int p_what);
 	virtual CSGBrush *_build_brush() = 0;
 	void _make_dirty(bool p_parent_removing = false);
-	void _make_painted(bool p_paint = false);
+	void _make_painted(bool p_paint = false, bool p_parent_removing = false);
 	PackedStringArray get_configuration_warnings() const override;
 
 	static void _bind_methods();
@@ -154,6 +154,10 @@ public:
 	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
 	void calculate_cube_map(const Vector<int> &p_faces);
 	Vector<Vector3> get_selected_faces(const Vector<int> &p_faces);
+	Vector<Vector3> get_csg_faces_anchor_points();
+	int get_csg_num_faces();
+	void set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth);
+	bool is_csg_face_smooth(int p_face);
 
 	Array get_meshes() const;
 	void update_shape();
