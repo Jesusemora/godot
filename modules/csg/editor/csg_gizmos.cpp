@@ -55,12 +55,13 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 	node = p_csg_shape;
 	if (node) {
-		if (node->is_root_shape()) {
-			options->show();
-		} else {
-			options->hide();
-		}
+		options->show()
 		rebuild_csg->show();
+		if (node->is_root_shape()) {
+			options->set_disabled(false);
+		} else {
+			options->set_disabled(true);
+		}
 	} else {
 		options->hide();
 		rebuild_csg->hide();
