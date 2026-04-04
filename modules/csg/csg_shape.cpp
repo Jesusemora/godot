@@ -1843,7 +1843,7 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_smoothing_angle", "smoothing_angle"), &CSGShape3D::set_smoothing_angle);
 	ClassDB::bind_method(D_METHOD("get_smoothing_angle"), &CSGShape3D::get_smoothing_angle);
 
-	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "_csg_brush", PROPERTY_HINT_NO_NODEPATH, "", PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL), "set_csg_brush", "get_csg_brush");
+	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "_csg_brush", PROPERTY_HINT_NO_NODEPATH, "", PROPERTY_USAGE_NO_EDITOR), "set_csg_brush", "get_csg_brush");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autosmooth"), "set_autosmooth", "is_autosmooth");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "smoothing_angle", PROPERTY_HINT_RANGE, "0,180,0.1,degrees"), "set_smoothing_angle", "get_smoothing_angle");
