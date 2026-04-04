@@ -1496,7 +1496,7 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 			bool is_material_used = false;
 			for (int j = 0; j < n->faces.size(); j++) {
 				if (n->faces[j].material == i) {
-					minds[j] = k;
+					minds.write[j] = k;
 					is_material_used = true;
 				}
 			}
@@ -1698,7 +1698,7 @@ int CSGShape3D::get_csg_num_faces() {
 	return n->faces.size();
 }
 
-void CSGShape3D::set_csg_face_smooth(const Vector<int> &p_faces bool p_smooth) {
+void CSGShape3D::set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth) {
 	CSGBrush *n = _get_brush();
 	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
@@ -1735,6 +1735,10 @@ bool CSGShape3D::is_csg_face_smooth(int p_face) {
 	}
 
 	return n->faces[p_face].smooth;
+}
+
+bool CSGShape3D::is_painted() const {
+	return painted;
 }
 
 Array CSGShape3D::get_meshes() const {
@@ -2283,7 +2287,7 @@ void CSGSphere3D::_bind_methods() {
 
 void CSGSphere3D::set_radius(const float p_radius) {
 	ERR_FAIL_COND(p_radius <= 0);
-	if (!painted) {
+	if (!is_painted()) {
 		radius = p_radius;
 	} else if (resize_brush(Vector3(radius, radius, radius), Vector3(p_radius, p_radius, p_radius))) {
 		radius = p_radius;
@@ -2457,7 +2461,7 @@ void CSGBox3D::_bind_methods() {
 }
 
 void CSGBox3D::set_size(const Vector3 &p_size) {
-	if (!painted) {
+	if (!is_painted()) {
 		size = p_size;
 	} else if (resize_brush(size, p_size)) {
 		size = p_size;
@@ -2669,7 +2673,7 @@ void CSGCylinder3D::_bind_methods() {
 }
 
 void CSGCylinder3D::set_radius(const float p_radius) {
-	if (!painted) {
+	if (!is_painted()) {
 		radius = p_radius;
 	} else if (resize_brush(Vector3(radius, 1.0, radius), Vector3(p_radius, 1.0, p_radius))) {
 		radius = p_radius;
@@ -2683,7 +2687,7 @@ float CSGCylinder3D::get_radius() const {
 }
 
 void CSGCylinder3D::set_height(const float p_height) {
-	if (!painted) {
+	if (!is_painted()) {
 		height = p_height;
 	} else if (resize_brush(Vector3(1.0, height, 1.0), Vector3(1.0, p_height, 1.0))) {
 		height = p_height;
