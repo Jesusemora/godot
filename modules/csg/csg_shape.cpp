@@ -273,11 +273,11 @@ void CSGShape3D::_make_painted(bool p_paint, bool p_parent_removing) {
 	} else if (!brush) {
 		_make_dirty();
 	} else if (!is_root_shape()) {
-		if (!painted && !p_paint) {
+		painted = painted || p_paint;
+		if (!painted) {
 			_make_dirty();
 			return;
 		}
-		painted = painted || p_paint;
 		notify_property_list_changed();
 		// We force a rebuild of the root shape only.
 		parent_shape->_make_painted();
@@ -961,10 +961,8 @@ void CSGShape3D::_notification(int p_what) {
 				if (parent_shape) {
 					set_base(RID());
 					root_mesh.unref();
+					_make_painted();
 				}
-			}
-			if (parent_shape) {
-				_make_painted();
 			}
 			last_visible = is_visible();
 		} break;
@@ -972,7 +970,6 @@ void CSGShape3D::_notification(int p_what) {
 		case NOTIFICATION_UNPARENTED: {
 			if (!is_root_shape()) {
 				// Update this node and its previous parent only if it's currently being removed from another CSG shape
-				// TODO investigate.
 				_make_painted(false, true); // Must be forced since is_root_shape() uses the previous parent
 			}
 			parent_shape = nullptr;
@@ -1099,8 +1096,6 @@ Dictionary CSGShape3D::get_csg_brush() {
 	}
 
 	if (is_root_shape()) {
-		// Ideally, we want to rebuild the brush to undo any manifold operations.
-		// Changes on parents of nested shapes would be undone, it would be best if all shapes were siblings.
 		return p_brush_data;
 	}
 
@@ -1154,6 +1149,7 @@ Dictionary CSGShape3D::get_csg_brush() {
 void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 	if (!p_brush_data.has("painted")) {
 		// Rebuild brush.
+		ERR_PRINT("Node doesn't have a _csg_brush Dictionary");
 		return;
 	}
 
@@ -1613,7 +1609,7 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 
 		if (nor.x > nor.y && nor.x > nor.z) {
 			// Direction X, ZY.
-			float mir_x = ang.normal.x < 0.0 ? -1.0 : 0.0;
+			float mir_x = ang.normal.x < 0.0 ? -1.0 : 1.0;
 			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(mir_x * v1.z, v1.y));
 			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(mir_x * v2.z, v2.y));
 			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.z, v3.y));
@@ -1625,7 +1621,7 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 			n->faces.write[p].uvs[2] = Vector2(mir_x * v3.x, v3.z);
 		} else {
 			// Direction Z, XY.
-			float mir_x = ang.normal.z < 0.0 ? -1.0 : 0.0;
+			float mir_x = ang.normal.z < 0.0 ? -1.0 : 1.0;
 			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(mir_x * v1.x, v1.y));
 			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(mir_x * v2.x, v2.y));
 			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.x, v3.y));
