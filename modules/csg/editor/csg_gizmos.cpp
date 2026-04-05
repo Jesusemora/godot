@@ -55,13 +55,12 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 	node = p_csg_shape;
 	if (node) {
-		options->show();
-		rebuild_csg->show();
 		if (node->is_root_shape()) {
-			options->set_disabled(false);
+			options->show();
 		} else {
-			options->set_disabled(true);
+			options->hide();
 		}
+		rebuild_csg->show();
 	} else {
 		options->hide();
 		rebuild_csg->hide();
@@ -512,7 +511,7 @@ void EditorPluginCSG::edit(Object *p_object) {
 
 bool EditorPluginCSG::handles(Object *p_object) const {
 	CSGShape3D *csg_shape = Object::cast_to<CSGShape3D>(p_object);
-	return csg_shape && csg_shape->is_root_shape();
+	return csg_shape != nullptr;
 }
 
 EditorPluginCSG::EditorPluginCSG() {
