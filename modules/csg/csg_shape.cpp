@@ -113,7 +113,7 @@ void CSGShape3D::set_use_collision(bool p_enable) {
 		set_collision_layer(collision_layer);
 		set_collision_mask(collision_mask);
 		set_collision_priority(collision_priority);
-		_make_dirty(); //force update
+		_make_painted(); //force update
 	} else {
 		PhysicsServer3D::get_singleton()->free_rid(root_collision_instance);
 		root_collision_instance = RID();
@@ -246,7 +246,6 @@ float CSGShape3D::get_snap() const {
 #endif // DISABLE_DEPRECATED
 
 void CSGShape3D::_make_dirty(bool p_parent_removing) {
-	painted = false;
 #ifndef PHYSICS_3D_DISABLED
 	if ((p_parent_removing || is_root_shape()) && !dirty) {
 		callable_mp(this, &CSGShape3D::update_shape).call_deferred(); // Must be deferred; otherwise, is_root_shape() will use the previous parent.
@@ -262,19 +261,21 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 	}
 #endif // PHYSICS_3D_DISABLED
 
+	painted = false;
 	dirty = true;
 	notify_property_list_changed();
 }
 
 void CSGShape3D::_make_painted(bool p_paint, bool p_parent_removing) {
 	if (p_parent_removing) {
-		// Why won't you work?
 		callable_mp(this, &CSGShape3D::update_shape).call_deferred();
-	} else if (!brush) {
-		_make_dirty();
 	} else if (!is_root_shape()) {
+		// The !is_root_shape() means the node has a parent so it has been added already.
 		painted = painted || p_paint;
 		if (!painted) {
+			_make_dirty();
+			return;
+		} else if (!brush) {
 			_make_dirty();
 			return;
 		}
@@ -282,8 +283,11 @@ void CSGShape3D::_make_painted(bool p_paint, bool p_parent_removing) {
 		// We force a rebuild of the root shape only.
 		parent_shape->_make_painted();
 	} else {
-		// With this we can replace most calls to _make_dirty().
-		_make_dirty();
+		// I have a theory the bug happens because properties are set before add_child, so the node is root shape because it doesn't have a parent.
+		if (is_inside_tree()) {
+			// With this we can replace most calls to _make_dirty().
+			_make_dirty();
+		}
 	}
 }
 
@@ -1008,7 +1012,7 @@ void CSGShape3D::_notification(int p_what) {
 				set_collision_mask(collision_mask);
 				set_collision_priority(collision_priority);
 				debug_shape_old_transform = get_global_transform();
-				_make_dirty();
+				_make_painted();
 			}
 		} break;
 
@@ -1216,7 +1220,6 @@ void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 	brush = n;
 
 	dirty = false;
-	_make_painted(true);
 }
 
 void CSGShape3D::rebuild_brush() {
@@ -1469,7 +1472,6 @@ void CSGShape3D::set_face_material(const Vector<int> &p_faces, const Ref<Materia
 			}
 		}
 		if (find_mat == -2) {
-			// TODO Remove unused materials.
 			find_mat = n->materials.size();
 			n->materials.push_back(p_material);
 		}
@@ -1615,7 +1617,7 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.z, v3.y));
 		} else if (nor.y > nor.z) {
 			// Direction Y, XZ.
-			float mir_x = ang.normal.y < 0.0 ? -1.0 : 0.0;
+			float mir_x = ang.normal.y < 0.0 ? -1.0 : 1.0;
 			n->faces.write[p].uvs[0] = Vector2(mir_x * v1.x, v1.z);
 			n->faces.write[p].uvs[1] = Vector2(mir_x * v2.x, v2.z);
 			n->faces.write[p].uvs[2] = Vector2(mir_x * v3.x, v3.z);
@@ -1737,6 +1739,15 @@ bool CSGShape3D::is_painted() const {
 	return painted;
 }
 
+Vector<int> CSGShape3D::get_all_csg_faces() const {
+	Vector<int> all_faces;
+	all_faces.resize(get_csg_num_faces());
+	for (int i = 0; i < all_faces.size(); i++) {
+		all_faces.write[i] = i;
+	}
+	return all_faces;
+}
+
 Array CSGShape3D::get_meshes() const {
 	if (root_mesh.is_valid()) {
 		Array arr;
@@ -1828,6 +1839,8 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_selected_faces", "faces"), &CSGShape3D::get_selected_faces);
 	ClassDB::bind_method(D_METHOD("get_csg_faces_anchor_points"), &CSGShape3D::get_csg_faces_anchor_points);
 	ClassDB::bind_method(D_METHOD("get_csg_num_faces"), &CSGShape3D::get_csg_num_faces);
+	ClassDB::bind_method(D_METHOD("set_csg_face_smooth", "faces", "smooth"), &CSGShape3D::set_csg_face_smooth);
+	ClassDB::bind_method(D_METHOD("is_csg_face_smooth", "face"), &CSGShape3D::is_csg_face_smooth);
 
 	ClassDB::bind_method(D_METHOD("get_meshes"), &CSGShape3D::get_meshes);
 
@@ -2087,7 +2100,7 @@ void CSGMesh3D::set_material(const Ref<Material> &p_material) {
 		return;
 	}
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material);
 }
 
 Ref<Material> CSGMesh3D::get_material() const {
@@ -2328,7 +2341,7 @@ bool CSGSphere3D::get_smooth_faces() const {
 
 void CSGSphere3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material)
 }
 
 Ref<Material> CSGSphere3D::get_material() const {
@@ -2496,7 +2509,7 @@ bool CSGBox3D::_set(const StringName &p_name, const Variant &p_value) {
 
 void CSGBox3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material)
 	update_gizmos();
 }
 
@@ -2728,7 +2741,7 @@ bool CSGCylinder3D::get_smooth_faces() const {
 
 void CSGCylinder3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material)
 }
 
 Ref<Material> CSGCylinder3D::get_material() const {
@@ -2955,7 +2968,7 @@ bool CSGTorus3D::get_smooth_faces() const {
 
 void CSGTorus3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material)
 }
 
 Ref<Material> CSGTorus3D::get_material() const {
@@ -3615,7 +3628,7 @@ bool CSGPolygon3D::get_smooth_faces() const {
 
 void CSGPolygon3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	_make_painted();
+	set_face_material(get_all_csg_faces(), material)
 }
 
 Ref<Material> CSGPolygon3D::get_material() const {

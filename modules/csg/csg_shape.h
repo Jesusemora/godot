@@ -159,6 +159,7 @@ public:
 	void set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth);
 	bool is_csg_face_smooth(int p_face);
 	bool is_painted() const;
+	Vector<int> get_all_csg_faces() const;
 
 	Array get_meshes() const;
 	void update_shape();
