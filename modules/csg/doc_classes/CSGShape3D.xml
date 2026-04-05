@@ -64,17 +64,16 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="get_csg_brush">
-			<return type="Dictionary" />
+		<method name="get_csg_faces_anchor_points">
+			<return type="PackedVector3Array" />
 			<description>
-				Returns the CSGBrush of the node as a [Dictionary] containing the following entries:
-				- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
-				- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
-				- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
-				- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
-				- [code]inverted[/code]: [bool] determining the [code]invert[/code] of all the faces.
-				- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
-				- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+				Returns the center of each face for displaying anchors.
+			</description>
+		</method>
+		<method name="get_csg_num_faces">
+			<return type="int" />
+			<description>
+				Returns the number of faces of the CSGBrush.
 			</description>
 		</method>
 		<method name="get_face_material">
@@ -116,6 +115,13 @@
 			<return type="PackedVector3Array" />
 			<description>
 				Returns a [PackedVector3Array] with the positions of the vertices of the CSGBrush. This method ignores duplicated positions and is intended to be used with [method set_vertex_position].
+			</description>
+		</method>
+		<method name="is_csg_face_smooth">
+			<return type="bool" />
+			<param index="0" name="face" type="int" />
+			<description>
+				Returns the smooth value of the face.
 			</description>
 		</method>
 		<method name="is_root_shape" qualifiers="const">
@@ -166,12 +172,12 @@
 				Based on [param value], enables or disables the specified layer in the [member collision_mask], given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="set_csg_brush">
+		<method name="set_csg_face_smooth">
 			<return type="void" />
-			<param index="0" name="csg_brush" type="Dictionary" />
+			<param index="0" name="faces" type="PackedInt32Array" />
+			<param index="1" name="smooth" type="bool" />
 			<description>
-				Can be used to manually set the CSGBrush.
-				See [method get_csg_brush]
+				Sets the faces smoothing.
 			</description>
 		</method>
 		<method name="set_face_material">
@@ -221,6 +227,16 @@
 		</method>
 	</methods>
 	<members>
+		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{ painted : false }">
+			The CSGBrush of the node as a [Dictionary] containing the following entries:
+			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
+			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
+			- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
+			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
+			- [code]inverted[/code]: [bool] determining the [code]invert[/code] of all the faces.
+			- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
+			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+		</member>
 		<member name="autosmooth" type="bool" setter="set_autosmooth" getter="is_autosmooth" default="false">
 			Enables automatic smoothing. This overrides any smoothing on the CSG node and instead uses [member smoothing_angle] to calculate normals based on the angle between faces.
 			Children of a [CSGCombiner3D] node will be treated as a single mesh.
