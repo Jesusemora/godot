@@ -283,7 +283,7 @@ void CSGShape3D::_make_painted(bool p_paint, bool p_parent_removing) {
 		// We force a rebuild of the root shape only.
 		parent_shape->_make_painted();
 	} else {
-		// I have a theory the bug happens because properties are set before add_child, so the node is root shape because it doesn't have a parent.
+		// Properties are set before add_child, so the node is root shape because it doesn't have a parent.
 		if (is_inside_tree()) {
 			// With this we can replace most calls to _make_dirty().
 			_make_dirty();
@@ -519,14 +519,13 @@ CSGBrush *CSGShape3D::_get_brush() {
 		// CSG tree must iterate over all shapes, but we gain the ability to edit parent brushes and save them in their base form.
 		HashMap<int32_t, Ref<Material>> mesh_materials;
 		manifold::Manifold root_manifold;
-		CSGBrush trans_root;
-		trans_root.copy_from(*n, get_global_transform());
-		_pack_manifold(&trans_root, root_manifold, mesh_materials, this);
+		_pack_manifold(n, root_manifold, mesh_materials, this);
 		manifold::OpType current_op = ManifoldOperation::convert_csg_op(get_operation());
 		std::vector<manifold::Manifold> manifolds;
 		manifolds.push_back(root_manifold);
 		Vector<CSGShape3D *> children;
 		get_csg_children_recursive(children);
+		Transform3D afinv = get_global_transform().affine_inverse();
 		for (int i = 0; i < children.size(); i++) {
 			CSGShape3D *child = children[i];
 			CSGBrush *child_brush = child->_get_brush();
@@ -534,7 +533,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 				continue;
 			}
 			CSGBrush transformed_brush;
-			transformed_brush.copy_from(*child_brush, child->get_global_transform()); // Changing this to global for nested nodes. We now need to transform the root shape too.
+			transformed_brush.copy_from(*child_brush, afinv * child->get_global_transform());
 			manifold::Manifold child_manifold;
 			_pack_manifold(&transformed_brush, child_manifold, mesh_materials, child);
 			manifold::OpType child_operation = ManifoldOperation::convert_csg_op(child->get_operation());
@@ -966,6 +965,8 @@ void CSGShape3D::_notification(int p_what) {
 					set_base(RID());
 					root_mesh.unref();
 					_make_painted();
+				} else {
+					rebuild_brush();
 				}
 			}
 			last_visible = is_visible();
@@ -1153,12 +1154,13 @@ Dictionary CSGShape3D::get_csg_brush() {
 void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 	if (!p_brush_data.has("painted")) {
 		// Rebuild brush.
-		ERR_PRINT("Node doesn't have a _csg_brush Dictionary");
+		ERR_PRINT("Node doesn't have a valid _csg_brush Dictionary");
 		return;
 	}
 
 	if (!p_brush_data["painted"]) {
 		// Brush has not been modified or is root shape. Rebuild brush.
+		dirty = true;
 		return;
 	}
 
@@ -2100,7 +2102,9 @@ void CSGMesh3D::set_material(const Ref<Material> &p_material) {
 		return;
 	}
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 }
 
 Ref<Material> CSGMesh3D::get_material() const {
@@ -2341,7 +2345,9 @@ bool CSGSphere3D::get_smooth_faces() const {
 
 void CSGSphere3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 }
 
 Ref<Material> CSGSphere3D::get_material() const {
@@ -2472,7 +2478,7 @@ void CSGBox3D::_bind_methods() {
 void CSGBox3D::set_size(const Vector3 &p_size) {
 	if (!is_painted()) {
 		size = p_size;
-	} else if (resize_brush(size, p_size)) {
+	} else if (resize_brush(size / 2, p_size / 2)) {
 		size = p_size;
 	}
 	_make_painted();
@@ -2509,7 +2515,9 @@ bool CSGBox3D::_set(const StringName &p_name, const Variant &p_value) {
 
 void CSGBox3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 	update_gizmos();
 }
 
@@ -2698,7 +2706,7 @@ float CSGCylinder3D::get_radius() const {
 void CSGCylinder3D::set_height(const float p_height) {
 	if (!is_painted()) {
 		height = p_height;
-	} else if (resize_brush(Vector3(1.0, height, 1.0), Vector3(1.0, p_height, 1.0))) {
+	} else if (resize_brush(Vector3(1.0, height * 0.5, 1.0), Vector3(1.0, p_height * 0.5, 1.0))) {
 		height = p_height;
 	}
 	_make_painted();
@@ -2741,7 +2749,9 @@ bool CSGCylinder3D::get_smooth_faces() const {
 
 void CSGCylinder3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 }
 
 Ref<Material> CSGCylinder3D::get_material() const {
@@ -2968,7 +2978,9 @@ bool CSGTorus3D::get_smooth_faces() const {
 
 void CSGTorus3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 }
 
 Ref<Material> CSGTorus3D::get_material() const {
@@ -3628,7 +3640,9 @@ bool CSGPolygon3D::get_smooth_faces() const {
 
 void CSGPolygon3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material);
+	if (is_inside_tree()) {
+		set_face_material(get_all_csg_faces(), material);
+	}
 }
 
 Ref<Material> CSGPolygon3D::get_material() const {
