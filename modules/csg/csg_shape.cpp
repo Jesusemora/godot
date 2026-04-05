@@ -1739,7 +1739,7 @@ bool CSGShape3D::is_painted() const {
 	return painted;
 }
 
-Vector<int> CSGShape3D::get_all_csg_faces() const {
+Vector<int> CSGShape3D::get_all_csg_faces() {
 	Vector<int> all_faces;
 	all_faces.resize(get_csg_num_faces());
 	for (int i = 0; i < all_faces.size(); i++) {
@@ -2341,7 +2341,7 @@ bool CSGSphere3D::get_smooth_faces() const {
 
 void CSGSphere3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material)
+	set_face_material(get_all_csg_faces(), material);
 }
 
 Ref<Material> CSGSphere3D::get_material() const {
