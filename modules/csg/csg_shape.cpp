@@ -2509,7 +2509,7 @@ bool CSGBox3D::_set(const StringName &p_name, const Variant &p_value) {
 
 void CSGBox3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material)
+	set_face_material(get_all_csg_faces(), material);
 	update_gizmos();
 }
 
@@ -2741,7 +2741,7 @@ bool CSGCylinder3D::get_smooth_faces() const {
 
 void CSGCylinder3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material)
+	set_face_material(get_all_csg_faces(), material);
 }
 
 Ref<Material> CSGCylinder3D::get_material() const {
@@ -2968,7 +2968,7 @@ bool CSGTorus3D::get_smooth_faces() const {
 
 void CSGTorus3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material)
+	set_face_material(get_all_csg_faces(), material);
 }
 
 Ref<Material> CSGTorus3D::get_material() const {
@@ -3628,7 +3628,7 @@ bool CSGPolygon3D::get_smooth_faces() const {
 
 void CSGPolygon3D::set_material(const Ref<Material> &p_material) {
 	material = p_material;
-	set_face_material(get_all_csg_faces(), material)
+	set_face_material(get_all_csg_faces(), material);
 }
 
 Ref<Material> CSGPolygon3D::get_material() const {
