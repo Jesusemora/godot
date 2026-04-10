@@ -1806,9 +1806,9 @@ TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 		if (curr_ngon != nullptr) {
 			Vector<Vector3> curr_faces;
 			for (int j = 0; j < curr_ngon.size(); j++) {
-				curr_faces.push_back(n->faces[j].vertices[0])
-				curr_faces.push_back(n->faces[j].vertices[1])
-				curr_faces.push_back(n->faces[j].vertices[2])
+				curr_faces.push_back(n->faces[j].vertices[0]);
+				curr_faces.push_back(n->faces[j].vertices[1]);
+				curr_faces.push_back(n->faces[j].vertices[2]);
 			}
 			ret[i] = curr_faces;
 		}
@@ -1827,7 +1827,7 @@ Vector<Vector3> CSGShape3D::get_all_ngon_lines() {
 	CSGBrush *n = _get_brush();
 
 	if (n->ngons.is_empty() || n->num_ngons < 1 || n->num_ngons < 0) {
-		// Don't throw error, instead default to older behaviour.
+		// Don't throw error, instead default to older behavior.
 		return ret;
 	}
 
