@@ -135,8 +135,6 @@ protected:
 
 public:
 	void get_csg_children_recursive(Vector<CSGShape3D *> &p_nodes);
-	Dictionary get_csg_brush();
-	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
 	// These work on selected faces.
 	void set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset);
@@ -258,6 +256,9 @@ protected:
 public:
 	void set_flip_faces(bool p_invert);
 	bool get_flip_faces();
+
+	Dictionary get_csg_brush();
+	void set_csg_brush(const Dictionary &p_brush_data);
 
 	CSGPrimitive3D();
 };

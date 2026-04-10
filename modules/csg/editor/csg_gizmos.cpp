@@ -164,7 +164,10 @@ void CSGShapeEditor::_rebuild_brush() {
 	EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
 	ur->create_action(TTR("Rebuild CSG Brush"));
 	ur->add_do_method(node, "rebuild_brush");
-	ur->add_undo_method(node, "set_csg_brush", node->get_csg_brush());
+	if (Object::cast_to<CSGPrimitive3D>(node)) {
+		CSGPrimitive3D *s = Object::cast_to<CSGPrimitive3D>(node);
+		ur->add_undo_method(node, "set_csg_brush", s->get_csg_brush());
+	}
 	ur->commit_action();
 }
 

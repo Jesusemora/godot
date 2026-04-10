@@ -126,20 +126,20 @@ void CSGBrush::add_ngons(const Vector<int> &p_ngons) {
 }
 
 Vector<int> CSGBrush::get_ngon_faces(int p_ngon) {
-	if (p_face > num_ngons) {
+	Vector<int> ret;
+
+	if (p_ngon > num_ngons) {
 		ERR_PRINT("Invalid ngon id");
-		return nullptr;
+		return ret;
 	}
 
 	if (num_ngons == 0) {
 		ERR_PRINT("Ngons not set in CSGBrush");
-		return nullptr;
+		return ret;
 	}
 
-	Vector<int> ret;
-
 	for (int i = 0; i < ngons.size(); i++) {
-		if (ngons[i] == p_face) {
+		if (ngons[i] == p_ngon) {
 			ret.push_back(i);
 		}
 	}

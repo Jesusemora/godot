@@ -11,6 +11,16 @@
 		<link title="Prototyping levels with CSG">$DOCS_URL/tutorials/3d/csg_tools.html</link>
 	</tutorials>
 	<members>
+		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{ painted : false }">
+			The CSGBrush of the node as a [Dictionary] containing the following entries:
+			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
+			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
+			- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
+			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
+			- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
+			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+			- [code]ngons[/code]: [PackedInt32Array] with the ngons assigned to each face.
+		</member>
 		<member name="flip_faces" type="bool" setter="set_flip_faces" getter="get_flip_faces" default="false">
 			If set, the order of the vertices in each triangle are reversed resulting in the backside of the mesh being drawn.
 		</member>
