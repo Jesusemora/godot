@@ -71,12 +71,6 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="get_csg_ngon_colliders">
-			<return type="Array[PackedVector3Array]" />
-			<description>
-				Returns an array of triangles for creating colliders for gizmos.
-			</description>
-		</method>
 		<method name="get_csg_num_faces">
 			<return type="int" />
 			<description>
