@@ -161,7 +161,11 @@ void CSGShapeEditor::_create_baked_collision_shape() {
 
 void CSGShapeEditor::_rebuild_brush() {
 	node->rebuild_brush();
-	// TODO Undo, Redo, Etc.
+	EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
+	ur->create_action(TTR("Rebuild CSG Brush"));
+	ur->add_do_method(node, "rebuild_brush");
+	ur->add_undo_method(node, "set_csg_brush", node->get_csg_brush());
+	ur->commit_action();
 }
 
 CSGShapeEditor::CSGShapeEditor() {
@@ -181,7 +185,6 @@ CSGShapeEditor::CSGShapeEditor() {
 	err_dialog = memnew(AcceptDialog);
 	add_child(err_dialog);
 
-	// TODO check.
 	rebuild_csg = memnew(Button);
 	rebuild_csg->hide();
 	rebuild_csg->set_text(TTR("REBUILD"));
@@ -409,16 +412,25 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	}
 
 	Vector<Vector3> lines;
-	lines.resize(faces.size() * 2);
-	{
-		const Vector3 *r = faces.ptr();
+	bool skip = cs->is_root_shape();
+	if (!skip) {
+		lines = cs->get_all_ngon_lines();
+		if (lines.is_empty()) {
+			skip = true;
+		}
+	}
+	if (skip) {
+		lines.resize(faces.size() * 2);
+		{
+			const Vector3 *r = faces.ptr();
 
-		for (int i = 0; i < lines.size(); i += 6) {
-			int f = i / 6;
-			for (int j = 0; j < 3; j++) {
-				int j_n = (j + 1) % 3;
-				lines.write[i + j * 2 + 0] = r[f * 3 + j];
-				lines.write[i + j * 2 + 1] = r[f * 3 + j_n];
+			for (int i = 0; i < lines.size(); i += 6) {
+				int f = i / 6;
+				for (int j = 0; j < 3; j++) {
+					int j_n = (j + 1) % 3;
+					lines.write[i + j * 2 + 0] = r[f * 3 + j];
+					lines.write[i + j * 2 + 1] = r[f * 3 + j_n];
+				}
 			}
 		}
 	}

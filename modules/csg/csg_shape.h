@@ -138,7 +138,7 @@ public:
 	Dictionary get_csg_brush();
 	void set_csg_brush(const Dictionary &p_brush_data);
 	void rebuild_brush();
-
+	// These work on selected faces.
 	void set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset);
 	Vector2 get_uv_offsets(int p_face);
 	void set_uv_scale(const Vector<int> &p_faces, const Vector2 &prev_scale, const Vector2 &p_scale);
@@ -146,20 +146,27 @@ public:
 	void rotate_uv(const Vector<int> &p_faces, const float angle);
 	void flip_x(const Vector<int> &p_faces);
 	void flip_y(const Vector<int> &p_faces);
-	bool resize_brush(const Vector3 &prev_size, const Vector3 &p_size);
-	void set_csg_flat(bool p_mode);
-	void set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material);
-	Ref<Material> get_face_material(int p_face);
-	Vector<Vector3> get_vertices();
-	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
 	void calculate_cube_map(const Vector<int> &p_faces);
-	Vector<Vector3> get_selected_faces(const Vector<int> &p_faces);
-	Vector<Vector3> get_csg_faces_anchor_points();
-	int get_csg_num_faces();
 	void set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth);
 	bool is_csg_face_smooth(int p_face);
-	bool is_painted() const;
+	// These change material.
+	void set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material);
+	Ref<Material> get_face_material(int p_face);
+	// These affect the entire brush.
+	bool resize_brush(const Vector3 &prev_size, const Vector3 &p_size);
+	void set_csg_invert();
+	void set_csg_flat(bool p_mode);
+	// These affect vertices.
+	Vector<Vector3> get_vertices();
+	void set_vertex_position(const Vector3 &curr_pos, const Vector3 &p_pos);
+	// These are helper methods for UX.
+	Vector<Vector3> get_selected_faces(const Vector<int> &p_faces);
+	int get_csg_num_faces();
 	Vector<int> get_all_csg_faces();
+	Vector<int> get_faces_from_ngon(int p_ngon);
+	TypedArray<Vector<Vector3>> get_csg_ngon_colliders();
+	Vector<Vector3> get_all_ngon_lines();
+	bool is_painted() const;
 
 	Array get_meshes() const;
 	void update_shape();

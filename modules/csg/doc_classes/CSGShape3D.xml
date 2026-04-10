@@ -50,6 +50,13 @@
 				Flips [param faces] in Y.
 			</description>
 		</method>
+		<method name="get_all_csg_faces">
+			<return type="PackedInt32Array" />
+			<description>
+				Returns a [PackedInt32Array] of all the faces of the CSGBrush, with each face being represented by a number.
+				Equivalent to doing [code]range(get_csg_num_faces())[/code].
+			</description>
+		</method>
 		<method name="get_collision_layer_value" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="layer_number" type="int" />
@@ -64,10 +71,10 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="get_csg_faces_anchor_points">
-			<return type="PackedVector3Array" />
+		<method name="get_csg_ngon_colliders">
+			<return type="Array[PackedVector3Array]" />
 			<description>
-				Returns the center of each face for displaying anchors.
+				Returns an array of triangles for creating colliders for gizmos.
 			</description>
 		</method>
 		<method name="get_csg_num_faces">
@@ -81,6 +88,13 @@
 			<param index="0" name="face" type="int" />
 			<description>
 				Gets the material of [param face] in the CSGBrush.
+			</description>
+		</method>
+		<method name="get_faces_from_ngon">
+			<return type="PackedInt32Array" />
+			<param index="0" name="p_ngon" type="int" />
+			<description>
+				Returns the id of the faces assigned to ngon [param p_ngon].
 			</description>
 		</method>
 		<method name="get_meshes" qualifiers="const">
@@ -133,7 +147,7 @@
 		<method name="rebuild_brush">
 			<return type="void" />
 			<description>
-				Rebuilds the CSGBrush based on the properties of the CSG node. Overrides any changes to the faces or vertices.
+				Rebuilds the CSGBrush based on the properties of the CSG node. Overrides any changes to the faces or vertices. Internally sets [code]painted[/code] to false, unlocking features like CSGCylinder [code]sides[/code] that do not update when the brush is painted.
 			</description>
 		</method>
 		<method name="resize_brush">
@@ -198,7 +212,8 @@
 				Usage:
 				[code]
 				# Offset the first and second faces of CSGBrush.
-				set_uv_offsets(PackedInt32Array(0, 1), get_uv_offsets(PackedInt32Array(0, 1)), Vector2(1.0, 1.0))
+				var faces : PackedInt32Array = PackedInt32Array([0, 1])
+				set_uv_offsets(faces, get_uv_offsets(faces), Vector2(1.0, 1.0))
 				[/code]
 			</description>
 		</method>
@@ -212,7 +227,9 @@
 				Usage:
 				[code]
 				# Scale the first and second faces of CSGBrush.
-				set_uv_scale(PackedInt32Array(0, 1), get_uv_scale(PackedInt32Array(0, 1)), Vector2(2.0, 2.0))
+				var faces : PackedInt32Array = PackedInt32Array([0, 1])
+				var curr_scale : Vector2 = get_uv_scale(faces[0])
+				set_uv_scale(faces, curr_scale, Vector2(curr_scale.x * 2.0, curr_scale.y * 2.0))
 				[/code]
 				Note: The values of p_scale can never be ZERO.
 			</description>
@@ -233,9 +250,9 @@
 			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
 			- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
 			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
-			- [code]inverted[/code]: [bool] determining the [code]invert[/code] of all the faces.
 			- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
 			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+			- [code]ngons[/code]: [PackedInt32Array] with the ngons assigned to each face.
 		</member>
 		<member name="autosmooth" type="bool" setter="set_autosmooth" getter="is_autosmooth" default="false">
 			Enables automatic smoothing. This overrides any smoothing on the CSG node and instead uses [member smoothing_angle] to calculate normals based on the angle between faces.
