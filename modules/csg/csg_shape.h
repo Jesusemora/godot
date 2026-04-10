@@ -154,7 +154,7 @@ public:
 	Ref<Material> get_face_material(int p_face);
 	// These affect the entire brush.
 	bool resize_brush(const Vector3 &prev_size, const Vector3 &p_size);
-	void set_csg_invert();
+	void set_csg_invert(bool inv_val);
 	void set_csg_flat(bool p_mode);
 	// These affect vertices.
 	Vector<Vector3> get_vertices();
