@@ -238,6 +238,17 @@
 		</method>
 	</methods>
 	<members>
+		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{ painted : false }">
+			The CSGBrush of the node as a [Dictionary] containing the following entries:
+			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
+			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
+			- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
+			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
+			- [code]inverted[/code]: needed since flip_faces is a property of [CSGPrimitive3D] and not [CSGShape3D].
+			- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
+			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+			- [code]ngons[/code]: [PackedInt32Array] with the ngons assigned to each face.
+		</member>
 		<member name="autosmooth" type="bool" setter="set_autosmooth" getter="is_autosmooth" default="false">
 			Enables automatic smoothing. This overrides any smoothing on the CSG node and instead uses [member smoothing_angle] to calculate normals based on the angle between faces.
 			Children of a [CSGCombiner3D] node will be treated as a single mesh.

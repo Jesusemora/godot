@@ -1101,6 +1101,145 @@ void CSGShape3D::rebuild_brush() {
 	_make_dirty();
 }
 
+Dictionary CSGShape3D::get_csg_brush() {
+	Dictionary p_brush_data;
+	p_brush_data["painted"] = painted;
+
+	if (!brush) {
+		return p_brush_data;
+	}
+
+	if (is_root_shape()) {
+		return p_brush_data;
+	}
+
+	if (!painted) {
+		// Only save painted brushes.
+		return p_brush_data;
+	}
+
+	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return p_brush_data;
+	}
+
+	if (n->faces.size() <= 0) {
+		return p_brush_data;
+	}
+
+	Vector<Vector3> vertices;
+	Vector<Vector2> uvs;
+	Vector<uint8_t> smooths;
+	Vector<uint8_t> mat_id;
+	Array materials;
+
+	for (int i = 0; i < n->faces.size(); i++) {
+		for (int j = 0; j < 3; j++) {
+			vertices.push_back(n->faces[i].vertices[j]);
+			uvs.push_back(n->faces[i].uvs[j]);
+		}
+
+		smooths.push_back(n->faces[i].smooth ? 1 : 0);
+		mat_id.push_back(n->faces[i].material);
+	}
+
+	p_brush_data["vertices"] = vertices;
+	p_brush_data["uvs"] = uvs;
+	// Replace with smooth groups in the future.
+	p_brush_data["smooth"] = smooths;
+	// We will not save combined shapes.
+	p_brush_data["inverted"] = n->faces[0].invert;
+	p_brush_data["material_id"] = mat_id;
+	p_brush_data["ngons"] = n->ngons;
+
+	for (int i = 0; i < n->materials.size(); i++) {
+		materials.push_back(n->materials[i]);
+	}
+
+	p_brush_data["materials"] = materials;
+
+	return p_brush_data;
+}
+
+void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
+	if (!p_brush_data.has("painted")) {
+		// Rebuild brush.
+		ERR_PRINT("Node doesn't have a valid _csg_brush Dictionary");
+		return;
+	}
+
+	if (!p_brush_data["painted"]) {
+		// Brush has not been modified or is root shape. Rebuild brush.
+		dirty = true;
+		return;
+	}
+
+	ERR_FAIL_COND(!p_brush_data.has("material_id"));
+	ERR_FAIL_COND(!p_brush_data.has("vertices"));
+	ERR_FAIL_COND(!p_brush_data.has("uvs"));
+	ERR_FAIL_COND(!p_brush_data.has("smooth"));
+	ERR_FAIL_COND(!p_brush_data.has("inverted"));
+	ERR_FAIL_COND(!p_brush_data.has("materials"));
+
+	painted = p_brush_data["painted"];
+
+	CSGBrush *n = memnew(CSGBrush);
+
+	Vector<uint8_t> mat_id = p_brush_data["material_id"];
+
+	int face_count = mat_id.size();
+
+	Vector<Vector3> faces = p_brush_data["vertices"];
+	Vector<Vector2> uvs = p_brush_data["uvs"];
+	Vector<bool> smooth;
+	Vector<Ref<Material>> materials;
+	Vector<bool> invert;
+
+	smooth.resize(face_count);
+	materials.resize(face_count);
+	invert.resize(face_count);
+
+	{
+		bool invrt = p_brush_data["inverted"];
+		Vector<uint8_t> smooth_i = p_brush_data["smooth"];
+		Array mats = p_brush_data["materials"];
+
+		bool *smoothw = smooth.ptrw();
+		Ref<Material> *materialsw = materials.ptrw();
+		bool *invertw = invert.ptrw();
+
+		for (int i = 0; i < face_count; i++) {
+			smoothw[i] = smooth_i[i] > 0;
+			int i_mat = mat_id[i];
+			if (i_mat < mats.size()) {
+				Ref<Material> t_mat = mats[i_mat];
+				if (t_mat.is_valid()) {
+					materialsw[i] = t_mat;
+				} else {
+					materialsw[i] = nullptr;
+				}
+			}
+			invertw[i] = invrt;
+		}
+	}
+
+	n->build_from_faces(faces, uvs, smooth, materials, invert);
+
+	if (p_brush_data.has("ngons")) {
+		n->add_ngons(p_brush_data["ngons"]);
+	} else {
+		WARN_PRINT("Resource doesn't have ngon data");
+	}
+
+	if (brush) {
+		memdelete(brush);
+	}
+
+	brush = n;
+
+	dirty = false;
+}
+
 void CSGShape3D::set_uv_offsets(const Vector<int> &p_faces, const Vector2 &prev_offset, const Vector2 &p_offset) {
 	// Use the offset obtained from `get_uv_offsets` when selecting faces.
 	CSGBrush *n = _get_brush();
@@ -1492,15 +1631,13 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 	return true;
 }
 
-void CSGShape3D::set_csg_invert() {
+void CSGShape3D::set_csg_invert(bool inv_val) {
 	CSGBrush *n = _get_brush();
 	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
 	if (n->faces.is_empty()) {
 		return;
 	}
-
-	bool inv_val = get_flip_faces();
 
 	for (int i = 0; i < n->faces.size(); i++) {
 		n->faces.write[i].invert = inv_val;
@@ -1799,6 +1936,8 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_calculating_tangents"), &CSGShape3D::is_calculating_tangents);
 
 	ClassDB::bind_method(D_METHOD("rebuild_brush"), &CSGShape3D::rebuild_brush);
+	ClassDB::bind_method(D_METHOD("set_csg_brush", "csg_brush"), &CSGShape3D::set_csg_brush);
+	ClassDB::bind_method(D_METHOD("get_csg_brush"), &CSGShape3D::get_csg_brush);
 	ClassDB::bind_method(D_METHOD("set_uv_offsets", "faces", "prev_offset", "p_offset"), &CSGShape3D::set_uv_offsets);
 	ClassDB::bind_method(D_METHOD("get_uv_offsets", "face"), &CSGShape3D::get_uv_offsets);
 	ClassDB::bind_method(D_METHOD("set_uv_scale", "faces", "prev_scale", "p_scale"), &CSGShape3D::set_uv_scale);
@@ -1832,6 +1971,7 @@ void CSGShape3D::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autosmooth"), "set_autosmooth", "is_autosmooth");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "smoothing_angle", PROPERTY_HINT_RANGE, "0,180,0.1,degrees"), "set_smoothing_angle", "get_smoothing_angle");
+	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "_csg_brush", PROPERTY_HINT_NO_NODEPATH, "", PROPERTY_USAGE_NO_EDITOR), "set_csg_brush", "get_csg_brush");
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "operation", PROPERTY_HINT_ENUM, "Union,Intersection,Subtraction"), "set_operation", "get_operation");
 #ifndef DISABLE_DEPRECATED
@@ -1904,11 +2044,7 @@ void CSGPrimitive3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_flip_faces", "flip_faces"), &CSGPrimitive3D::set_flip_faces);
 	ClassDB::bind_method(D_METHOD("get_flip_faces"), &CSGPrimitive3D::get_flip_faces);
 
-	ClassDB::bind_method(D_METHOD("set_csg_brush", "csg_brush"), &CSGPrimitive3D::set_csg_brush);
-	ClassDB::bind_method(D_METHOD("get_csg_brush"), &CSGPrimitive3D::get_csg_brush);
-
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_faces"), "set_flip_faces", "get_flip_faces");
-	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "_csg_brush", PROPERTY_HINT_NO_NODEPATH, "", PROPERTY_USAGE_NO_EDITOR), "set_csg_brush", "get_csg_brush");
 }
 
 void CSGPrimitive3D::set_flip_faces(bool p_invert) {
@@ -1919,7 +2055,7 @@ void CSGPrimitive3D::set_flip_faces(bool p_invert) {
 	flip_faces = p_invert;
 
 	if ((is_painted() && p_invert) || (!is_root_shape() && is_inside_tree())) {
-		set_csg_invert();
+		set_csg_invert(flip_faces);
 	}
 
 	_make_painted();
@@ -1927,143 +2063,6 @@ void CSGPrimitive3D::set_flip_faces(bool p_invert) {
 
 bool CSGPrimitive3D::get_flip_faces() {
 	return flip_faces;
-}
-
-Dictionary CSGPrimitive3D::get_csg_brush() {
-	Dictionary p_brush_data;
-	p_brush_data["painted"] = painted;
-
-	if (!brush) {
-		return p_brush_data;
-	}
-
-	if (is_root_shape()) {
-		return p_brush_data;
-	}
-
-	if (!painted) {
-		// Only save painted brushes.
-		return p_brush_data;
-	}
-
-	CSGBrush *n = _get_brush();
-	if (n == nullptr) {
-		return p_brush_data;
-	}
-
-	if (n->faces.size() <= 0) {
-		return p_brush_data;
-	}
-
-	Vector<Vector3> vertices;
-	Vector<Vector2> uvs;
-	Vector<uint8_t> smooths;
-	Vector<uint8_t> mat_id;
-	Array materials;
-
-	for (int i = 0; i < n->faces.size(); i++) {
-		for (int j = 0; j < 3; j++) {
-			vertices.push_back(n->faces[i].vertices[j]);
-			uvs.push_back(n->faces[i].uvs[j]);
-		}
-
-		smooths.push_back(n->faces[i].smooth ? 1 : 0);
-		mat_id.push_back(n->faces[i].material);
-	}
-
-	p_brush_data["vertices"] = vertices;
-	p_brush_data["uvs"] = uvs;
-	// Replace with smooth groups in the future.
-	p_brush_data["smooth"] = smooths;
-	// We will not save combined shapes.
-	p_brush_data["material_id"] = mat_id;
-	p_brush_data["ngons"] = n->ngons;
-
-	for (int i = 0; i < n->materials.size(); i++) {
-		materials.push_back(n->materials[i]);
-	}
-
-	p_brush_data["materials"] = materials;
-
-	return p_brush_data;
-}
-
-void CSGPrimitive3D::set_csg_brush(const Dictionary &p_brush_data) {
-	if (!p_brush_data.has("painted")) {
-		// Rebuild brush.
-		ERR_PRINT("Node doesn't have a valid _csg_brush Dictionary");
-		return;
-	}
-
-	if (!p_brush_data["painted"]) {
-		// Brush has not been modified or is root shape. Rebuild brush.
-		dirty = true;
-		return;
-	}
-
-	ERR_FAIL_COND(!p_brush_data.has("material_id"));
-	ERR_FAIL_COND(!p_brush_data.has("vertices"));
-	ERR_FAIL_COND(!p_brush_data.has("uvs"));
-	ERR_FAIL_COND(!p_brush_data.has("smooth"));
-	ERR_FAIL_COND(!p_brush_data.has("materials"));
-
-	painted = p_brush_data["painted"];
-
-	CSGBrush *n = memnew(CSGBrush);
-
-	Vector<uint8_t> mat_id = p_brush_data["material_id"];
-
-	int face_count = mat_id.size();
-
-	Vector<Vector3> faces = p_brush_data["vertices"];
-	Vector<Vector2> uvs = p_brush_data["uvs"];
-	Vector<bool> smooth;
-	Vector<Ref<Material>> materials;
-	Vector<bool> invert;
-
-	smooth.resize(face_count);
-	materials.resize(face_count);
-	invert.resize(face_count);
-
-	{
-		bool invrt = get_flip_faces();
-		Vector<uint8_t> smooth_i = p_brush_data["smooth"];
-		Array mats = p_brush_data["materials"];
-
-		bool *smoothw = smooth.ptrw();
-		Ref<Material> *materialsw = materials.ptrw();
-		bool *invertw = invert.ptrw();
-
-		for (int i = 0; i < face_count; i++) {
-			smoothw[i] = smooth_i[i] > 0;
-			int i_mat = mat_id[i];
-			if (i_mat < mats.size()) {
-				Ref<Material> t_mat = mats[i_mat];
-				if (t_mat.is_valid()) {
-					materialsw[i] = t_mat;
-				} else {
-					materialsw[i] = nullptr;
-				}
-			}
-			invertw[i] = invrt;
-		}
-	}
-
-	n->build_from_faces(faces, uvs, smooth, materials, invert);
-
-	if (p_brush_data.has("ngons")) {
-		n->add_ngons(p_brush_data["ngons"]);
-	} else {
-		WARN_PRINT("Resource doesn't have ngon data");
-	}
-
-	if (brush) {
-		memdelete(brush);
-	}
-
-	brush = n;
-
-	dirty = false;
 }
 
 CSGPrimitive3D::CSGPrimitive3D() {
