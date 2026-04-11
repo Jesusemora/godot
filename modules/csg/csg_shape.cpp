@@ -1822,44 +1822,6 @@ TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 	return ret;
 }
 
-Vector<Vector3> CSGShape3D::get_all_ngon_lines() {
-	// Nicer looking lines.
-	Vector<Vector3> ret;
-	CSGBrush *n = _get_brush();
-
-	if (n->ngons.is_empty() || n->num_ngons < 1 || n->num_ngons < 0) {
-		// Don't throw error, instead default to older behavior.
-		return ret;
-	}
-
-	// TODO Move to gizmos.
-	TypedArray<Vector<Vector3>> local_csg_faces = get_csg_ngon_colliders();
-
-	// TODO Optimize.
-	for (int i = 0; i < local_csg_faces.size(); i++) {
-		Vector<Vector3> local_edges;
-		Vector<Vector3> curr_ngon = local_csg_faces[i];
-		for (int j = 0; j < curr_ngon.size() / 3; j++) {
-			for (int k = 0; k < 3; k++) {
-				int k_n = (k + 1) % 3;
-				local_edges.push_back(curr_ngon[j * 3 + k]);
-				local_edges.push_back(curr_ngon[j * 3 + k_n]);
-			}
-		}
-		for (int j = 0; j < local_edges.size() / 2; j++) {
-			for (int k = j; k < local_edges.size() / 2; k++) {
-				// TODO Simplify.
-				bool comp_edges = (local_edges[j * 2] == local_edges[k * 2] && local_edges[j * 2 + 1] == local_edges[k * 2 + 1]) && (local_edges[j * 2] == local_edges[k * 2 + 1] && local_edges[j * 2 + 1] == local_edges[k * 2]);
-				if (!comp_edges) {
-					ret.push_back(local_edges[j * 2]);
-					ret.push_back(local_edges[j * 2 + 1]);
-				}
-			}
-		}
-	}
-	return ret;
-}
-
 bool CSGShape3D::is_painted() const {
 	return painted;
 }
@@ -2031,8 +1993,21 @@ CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_ver
 	// Meshes are imported as triangles so there's no way to use quads from here.
 	Vector<int> ngons;
 	ngons.resize(new_brush->faces.size());
-	for (int i = 0; i < ngons.size(); i++) {
-		ngons.write[i] = i;
+	{
+		// Create perfect quads.
+		ERR_FAIL_COND_V(!new_brush->faces.size() > 0, new_brush);
+		int ngon_counter = 0;
+		ngons.write[0] = ngon_counter;
+		Vector3 f_vert =  new_brush->faces[0].vertices[0];
+		Vector3 l_vert = new_brush->faces[0].vertices[2];
+		for (int i = 1; i < ngons.size(); i++) {
+			if (!f_vert.is_equal_approx(new_brush->faces[i].vertices[2]) || !l_vert.is_equal_approx(new_brush->faces[i].vertices[0])) {
+				ngon_counter++;
+			}
+			ngons.write[i] = ngon_counter;
+			f_vert = new_brush->faces[i].vertices[0];
+			l_vert = new_brush->faces[i].vertices[2];
+		}
 	}
 
 	new_brush->add_ngons(ngons);
@@ -2542,6 +2517,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 		Vector3 vertex_mul = size / 2;
 
 		{
+			int ngon_counter = 0;
 			for (int i = 0; i < 6; i++) {
 				Vector3 face_points[4];
 				float uv_points[8] = { 0, 0, 0, 1, 1, 1, 1, 0 };
@@ -2578,6 +2554,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 				smoothw[face] = false;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
+				ngonw[face] = ngon_counter;
 
 				face++;
 				//face 2
@@ -2592,8 +2569,8 @@ CSGBrush *CSGBox3D::_build_brush() {
 				smoothw[face] = false;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
-
-				ngonw[face] = face / 2;
+				ngonw[face] = ngon_counter;
+				ngon_counter++;
 
 				face++;
 			}

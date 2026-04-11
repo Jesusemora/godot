@@ -71,6 +71,12 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
+		<method name="get_csg_ngon_colliders">
+			<return type="PackedVector3Array[]" />
+			<description>
+				Returns an array of triangles for creating colliders for gizmos.
+			</description>
+		</method>
 		<method name="get_csg_num_faces">
 			<return type="int" />
 			<description>
@@ -238,7 +244,7 @@
 		</method>
 	</methods>
 	<members>
-		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{ painted : false }">
+		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{&quot;painted&quot;: false }">
 			The CSGBrush of the node as a [Dictionary] containing the following entries:
 			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
 			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.

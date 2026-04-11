@@ -414,7 +414,70 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	Vector<Vector3> lines;
 	bool skip = cs->is_root_shape();
 	if (!skip) {
-		lines = cs->get_all_ngon_lines();
+		TypedArray<Vector<Vector3>> local_csg_faces = cs->get_csg_ngon_colliders();
+		if (local_csg_faces.is_empty()) {
+			skip = true;
+		}
+		// TODO Optimize.
+		Vector<Vector3> temp_edges;
+		for (int i = 0; i < local_csg_faces.size(); i++) {
+			Vector<Vector3> local_edges;
+			Vector<Vector3> curr_ngon = local_csg_faces[i];
+			// Convert to lines.
+			if (curr_ngon.size() == 6) {
+				// Quad.
+				local_edges.resize(8);
+				local_edges.write[0] = curr_ngon[0];
+				local_edges.write[1] = curr_ngon[1];
+				local_edges.write[2] = curr_ngon[1];
+				local_edges.write[3] = curr_ngon[2];
+				local_edges.write[4] = curr_ngon[3];
+				local_edges.write[5] = curr_ngon[4];
+				local_edges.write[6] = curr_ngon[4];
+				local_edges.write[7] = curr_ngon[5];
+			} else {
+				// Tri and Ngon.
+				for (int j = 0; j < curr_ngon.size() / 3; j++) {
+					for (int k = 0; k < 3; k++) {
+						int k_n = (k + 1) % 3;
+						local_edges.push_back(curr_ngon[j * 3 + k]);
+						local_edges.push_back(curr_ngon[j * 3 + k_n]);
+					}
+				}
+			}
+			if (curr_ngon.size() > 6) {
+				// Remove doubles inside ngon.
+				for (int j = 0; j < local_edges.size() / 2; j++) {
+					for (int k = j + 1; k < local_edges.size() / 2; k++) {
+						// TODO Simplify.
+						bool comp_edges = (local_edges[j * 2] == local_edges[k * 2] && local_edges[j * 2 + 1] == local_edges[k * 2 + 1]) && (local_edges[j * 2] == local_edges[k * 2 + 1] && local_edges[j * 2 + 1] == local_edges[k * 2]);
+						if (!comp_edges) {
+							temp_edges.push_back(local_edges[j * 2]);
+							temp_edges.push_back(local_edges[j * 2 + 1]);
+						}
+					}
+				}
+			} else {
+				for (int j = 0; j < local_edges.size(); j++) {
+					temp_edges.push_back(local_edges[j]);
+				}
+			}
+		}
+		// Remove duplicated lines.
+		for (int i = 0; i < temp_edges.size() / 2; i++) {
+			bool found_edge = false;
+			for (int j = 0; j < lines.size() / 2; j++) {
+				if (temp_edges[i * 2].is_equal_aprox(lines[j * 2]) && temp_edges[i * 2 + 1].is_equal_aprox(lines[j * 2 + 1]) && temp_edges[i * 2].is_equal_aprox(lines[j * 2 + 1]) && temp_edges[i * 2 + 1].is_equal_aprox(lines[j * 2])) {
+					found_edge = true;
+					break;
+				}
+			}
+
+			if (!found_edge) {
+				lines.push_back(temp_edges[i * 2]);
+				lines.push_back(temp_edges[i * 2 + 1]);
+			}
+		}
 		if (lines.is_empty()) {
 			skip = true;
 		}

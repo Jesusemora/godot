@@ -117,6 +117,10 @@ void CSGBrush::copy_from(const CSGBrush &p_brush, const Transform3D &p_xform) {
 }
 
 void CSGBrush::add_ngons(const Vector<int> &p_ngons) {
+	if (p_ngons.size() > faces.size()) {
+		ERR_PRINT("Wrong number of elements in p_ngons");
+		return;
+	}
 	ngons = p_ngons;
 	for (int i = 0; i < p_ngons.size(); i++) {
 		if (p_ngons[i] > num_ngons) {

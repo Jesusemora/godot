@@ -165,7 +165,6 @@ public:
 	Vector<int> get_all_csg_faces();
 	Vector<int> get_faces_from_ngon(int p_ngon);
 	TypedArray<Vector<Vector3>> get_csg_ngon_colliders();
-	Vector<Vector3> get_all_ngon_lines();
 	bool is_painted() const;
 
 	Array get_meshes() const;
