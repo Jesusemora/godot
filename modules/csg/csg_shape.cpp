@@ -1906,8 +1906,8 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("flip_x", "faces"), &CSGShape3D::flip_x);
 	ClassDB::bind_method(D_METHOD("flip_y", "faces"), &CSGShape3D::flip_y);
 	ClassDB::bind_method(D_METHOD("calculate_cube_map", "faces"), &CSGShape3D::calculate_cube_map);
-	ClassDB::bind_method(D_METHOD("set_csg_face_smooth", "faces", "smooth"), &CSGShape3D::set_csg_face_smooth);
-	ClassDB::bind_method(D_METHOD("is_csg_face_smooth", "face"), &CSGShape3D::is_csg_face_smooth);
+	ClassDB::bind_method(D_METHOD("set_csg_face_smooth_group", "faces", "smooth"), &CSGShape3D::set_csg_face_smooth_group);
+	ClassDB::bind_method(D_METHOD("get_csg_face_smooth_group", "face"), &CSGShape3D::get_csg_face_smooth_group);
 	ClassDB::bind_method(D_METHOD("set_face_material", "faces", "material"), &CSGShape3D::set_face_material);
 	ClassDB::bind_method(D_METHOD("get_face_material", "face"), &CSGShape3D::get_face_material);
 	ClassDB::bind_method(D_METHOD("resize_brush", "prev_size", "size"), &CSGShape3D::resize_brush);
