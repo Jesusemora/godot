@@ -1998,7 +1998,7 @@ CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_ver
 		ERR_FAIL_COND_V(!new_brush->faces.size() > 0, new_brush);
 		int ngon_counter = 0;
 		ngons.write[0] = ngon_counter;
-		Vector3 f_vert =  new_brush->faces[0].vertices[0];
+		Vector3 f_vert = new_brush->faces[0].vertices[0];
 		Vector3 l_vert = new_brush->faces[0].vertices[2];
 		for (int i = 1; i < ngons.size(); i++) {
 			if (!f_vert.is_equal_approx(new_brush->faces[i].vertices[2]) || !l_vert.is_equal_approx(new_brush->faces[i].vertices[0])) {
