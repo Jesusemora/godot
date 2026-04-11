@@ -1805,9 +1805,9 @@ TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 		if (!curr_ngon.is_empty()) {
 			Vector<Vector3> curr_faces;
 			for (int j = 0; j < curr_ngon.size(); j++) {
-				curr_faces.push_back(n->faces[j].vertices[0]);
-				curr_faces.push_back(n->faces[j].vertices[1]);
-				curr_faces.push_back(n->faces[j].vertices[2]);
+				curr_faces.push_back(n->faces[curr_ngon[j]].vertices[0]);
+				curr_faces.push_back(n->faces[curr_ngon[j]].vertices[1]);
+				curr_faces.push_back(n->faces[curr_ngon[j]].vertices[2]);
 			}
 			ret.push_back(curr_faces);
 		}
