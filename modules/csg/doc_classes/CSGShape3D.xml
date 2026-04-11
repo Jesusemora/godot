@@ -244,7 +244,7 @@
 		</method>
 	</methods>
 	<members>
-		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{&quot;painted&quot;: false }">
+		<member name="_csg_brush" type="Dictionary" setter="set_csg_brush" getter="get_csg_brush" default="{ &quot;painted&quot;: false }">
 			The CSGBrush of the node as a [Dictionary] containing the following entries:
 			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
 			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.

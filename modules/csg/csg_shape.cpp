@@ -1800,7 +1800,6 @@ TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 		return ret;
 	}
 
-	ret.resize(n->num_ngons);
 	for (int i = 0; i < n->num_ngons; i++) {
 		Vector<int> curr_ngon = n->get_ngon_faces(i);
 		if (!curr_ngon.is_empty()) {
@@ -1810,11 +1809,11 @@ TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 				curr_faces.push_back(n->faces[j].vertices[1]);
 				curr_faces.push_back(n->faces[j].vertices[2]);
 			}
-			ret[i] = curr_faces;
+			ret.push_back(curr_faces);
 		}
 	}
 
-	// TODO get_flip_faces().
+	// Flip faces so they can be selected from the inside.
 	if (get_operation() == OPERATION_SUBTRACTION) {
 		ret.reverse();
 	}
