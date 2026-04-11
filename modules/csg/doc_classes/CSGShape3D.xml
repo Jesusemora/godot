@@ -71,6 +71,13 @@
 				Returns whether or not the specified layer of the [member collision_mask] is enabled, given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
+		<method name="get_csg_face_smooth_group">
+			<return type="int" />
+			<param index="0" name="face" type="int" />
+			<description>
+				Returns the smooth value of the face.
+			</description>
+		</method>
 		<method name="get_csg_ngon_colliders">
 			<return type="PackedVector3Array[]" />
 			<description>
@@ -131,13 +138,6 @@
 				Returns a [PackedVector3Array] with the positions of the vertices of the CSGBrush. This method ignores duplicated positions and is intended to be used with [method set_vertex_position].
 			</description>
 		</method>
-		<method name="is_csg_face_smooth">
-			<return type="bool" />
-			<param index="0" name="face" type="int" />
-			<description>
-				Returns the smooth value of the face.
-			</description>
-		</method>
 		<method name="is_root_shape" qualifiers="const">
 			<return type="bool" />
 			<description>
@@ -186,12 +186,12 @@
 				Based on [param value], enables or disables the specified layer in the [member collision_mask], given a [param layer_number] between 1 and 32.
 			</description>
 		</method>
-		<method name="set_csg_face_smooth">
+		<method name="set_csg_face_smooth_group">
 			<return type="void" />
 			<param index="0" name="faces" type="PackedInt32Array" />
-			<param index="1" name="smooth" type="bool" />
+			<param index="1" name="smooth" type="int" />
 			<description>
-				Sets the faces smoothing.
+				Sets the faces smoothing. A value of 0 will make the face flat while any value above will make it smooth. Faces of different brushes with the same smooth group will blend together.
 			</description>
 		</method>
 		<method name="set_face_material">

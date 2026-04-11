@@ -43,7 +43,7 @@ struct CSGBrush {
 		Vector3 vertices[3];
 		Vector2 uvs[3];
 		AABB aabb;
-		bool smooth = false;
+		int smooth = 0;
 		bool invert = false;
 		int material = 0;
 	};
@@ -63,7 +63,7 @@ struct CSGBrush {
 	}
 
 	// Create a brush from faces.
-	void build_from_faces(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uvs, const Vector<bool> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<bool> &p_invert_faces);
+	void build_from_faces(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uvs, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<bool> &p_invert_faces);
 	void copy_from(const CSGBrush &p_brush, const Transform3D &p_xform);
 	void add_ngons(const Vector<int> &p_ngons);
 	Vector<int> get_ngon_faces(int p_ngon);

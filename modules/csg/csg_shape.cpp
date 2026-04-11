@@ -333,7 +333,7 @@ static void _unpack_manifold(
 			CSGBrush::Face face;
 			face.material = material_id;
 			int32_t first_property_index = mesh.triVerts[vert_i + order[0]];
-			face.smooth = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_SMOOTH_GROUP] > 0.5f;
+			face.smooth = static_cast<int>(mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_SMOOTH_GROUP]);
 			face.invert = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_INVERT] > 0.5f;
 
 			for (int32_t tri_order_i = 0; tri_order_i < 3; tri_order_i++) {
@@ -471,7 +471,7 @@ static void _pack_manifold(
 				vert[MANIFOLD_PROPERTY_POSITION_Z] = face.vertices[i].z;
 				vert[MANIFOLD_PROPERTY_UV_X_0] = face.uvs[i].x;
 				vert[MANIFOLD_PROPERTY_UV_Y_0] = face.uvs[i].y;
-				vert[MANIFOLD_PROPERTY_SMOOTH_GROUP] = face.smooth ? 1.0f : 0.0f;
+				vert[MANIFOLD_PROPERTY_SMOOTH_GROUP] = face.smooth;
 				vert[MANIFOLD_PROPERTY_INVERT] = face.invert ? 1.0f : 0.0f;
 			}
 		}
@@ -691,8 +691,8 @@ void CSGShape3D::update_shape() {
 		}
 	} else {
 		for (int i = 0; i < smooth_faces.size(); i++) {
-			bool face_is_smooth = n->faces[i].smooth;
-			if (face_is_smooth) {
+			int face_is_smooth = n->faces[i].smooth;
+			if (face_is_smooth > 0) {
 				for (int k = 0; k < 3; k++) {
 					Vector3 vert_a = n->faces[i].vertices[k];
 					int curr_vert = i * 3 + k;
@@ -1139,7 +1139,7 @@ Dictionary CSGShape3D::get_csg_brush() {
 			uvs.push_back(n->faces[i].uvs[j]);
 		}
 
-		smooths.push_back(n->faces[i].smooth ? 1 : 0);
+		smooths.push_back(n->faces[i].smooth);
 		mat_id.push_back(n->faces[i].material);
 	}
 
@@ -1191,7 +1191,7 @@ void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 
 	Vector<Vector3> faces = p_brush_data["vertices"];
 	Vector<Vector2> uvs = p_brush_data["uvs"];
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -1204,12 +1204,12 @@ void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 		Vector<uint8_t> smooth_i = p_brush_data["smooth"];
 		Array mats = p_brush_data["materials"];
 
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 
 		for (int i = 0; i < face_count; i++) {
-			smoothw[i] = smooth_i[i] > 0;
+			smoothw[i] = smooth_i[i];
 			int i_mat = mat_id[i];
 			if (i_mat < mats.size()) {
 				Ref<Material> t_mat = mats[i_mat];
@@ -1467,7 +1467,7 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 	_make_painted(true);
 }
 
-void CSGShape3D::set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth) {
+void CSGShape3D::set_csg_face_smooth_group(const Vector<int> &p_faces, int p_smooth) {
 	CSGBrush *n = _get_brush();
 	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
 
@@ -1485,22 +1485,22 @@ void CSGShape3D::set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth) 
 	_make_painted(true);
 }
 
-bool CSGShape3D::is_csg_face_smooth(int p_face) {
+int CSGShape3D::get_csg_face_smooth_group(int p_face) {
 	if (!brush) {
-		return false;
+		return 0;
 	}
 
 	CSGBrush *n = _get_brush();
 	if (n == nullptr) {
-		return false;
+		return 0;
 	}
 
 	if (n->faces.is_empty()) {
-		return false;
+		return 0;
 	}
 
 	if (p_face > n->faces.size() || p_face < 0) {
-		return false;
+		return 0;
 	}
 
 	return n->faces[p_face].smooth;
@@ -1656,7 +1656,7 @@ void CSGShape3D::set_csg_flat(bool p_mode) {
 
 	// TODO Smooth groups.
 	for (int i = 0; i < n->faces.size(); i++) {
-		n->faces.write[i].smooth = p_mode;
+		n->faces.write[i].smooth = p_mode ? 1 : 0;
 	}
 }
 
@@ -1777,7 +1777,6 @@ Vector<int> CSGShape3D::get_faces_from_ngon(int p_ngon) {
 
 TypedArray<Vector<Vector3>> CSGShape3D::get_csg_ngon_colliders() {
 	// Returns an array of Vector<Vector3> to use to create a TriangleMesh for each collider of ngon to be used in gizmos.
-	// This could probably work better if it returns TriangleMesh, as it will be used for collision.
 	TypedArray<Vector<Vector3>> ret;
 	CSGBrush *n = _get_brush();
 
@@ -1975,7 +1974,7 @@ CSGCombiner3D::CSGCombiner3D() {
 
 /////////////////////
 
-CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<bool> &p_smooth, const Vector<Ref<Material>> &p_materials) {
+CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials) {
 	CSGBrush *new_brush = memnew(CSGBrush);
 
 	Vector<bool> invert;
@@ -2051,7 +2050,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 	}
 
 	Vector<Vector3> vertices;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<Vector2> uvs;
 	Ref<Material> base_material = get_material();
@@ -2105,7 +2104,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 			uvs.resize(as + is);
 
 			Vector3 *vw = vertices.ptrw();
-			bool *sw = smooth.ptrw();
+			int *sw = smooth.ptrw();
 			Vector2 *uvw = uvs.ptrw();
 			Ref<Material> *mw = materials.ptrw();
 
@@ -2137,7 +2136,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 				uvw[as + j + 1] = uv[1];
 				uvw[as + j + 2] = uv[2];
 
-				sw[(as + j) / 3] = !flat;
+				sw[(as + j) / 3] = flat ? 0 : 1;
 				mw[(as + j) / 3] = mat;
 			}
 		} else {
@@ -2150,7 +2149,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 			materials.resize((as + is) / 3);
 
 			Vector3 *vw = vertices.ptrw();
-			bool *sw = smooth.ptrw();
+			int *sw = smooth.ptrw();
 			Vector2 *uvw = uvs.ptrw();
 			Ref<Material> *mw = materials.ptrw();
 
@@ -2179,7 +2178,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 				uvw[as + j + 1] = uv[1];
 				uvw[as + j + 2] = uv[2];
 
-				sw[(as + j) / 3] = !flat;
+				sw[(as + j) / 3] = flat ? 1 : 0;
 				mw[(as + j) / 3] = mat;
 			}
 		}
@@ -2258,7 +2257,7 @@ CSGBrush *CSGSphere3D::_build_brush() {
 
 	Vector<Vector3> faces;
 	Vector<Vector2> uvs;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -2275,7 +2274,7 @@ CSGBrush *CSGSphere3D::_build_brush() {
 	{
 		Vector3 *facesw = faces.ptrw();
 		Vector2 *uvsw = uvs.ptrw();
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 		int *ngonw = ngons.ptrw();
@@ -2347,7 +2346,7 @@ CSGBrush *CSGSphere3D::_build_brush() {
 					uvsw[face * 3 + 1] = u[1];
 					uvsw[face * 3 + 2] = u[2];
 
-					smoothw[face] = smooth_faces;
+					smoothw[face] = smooth_faces ? 1 : 0;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 
@@ -2366,7 +2365,7 @@ CSGBrush *CSGSphere3D::_build_brush() {
 					uvsw[face * 3 + 1] = u[3];
 					uvsw[face * 3 + 2] = u[0];
 
-					smoothw[face] = smooth_faces;
+					smoothw[face] = smooth_faces ? 1 : 0;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 
@@ -2489,7 +2488,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 
 	Vector<Vector3> faces;
 	Vector<Vector2> uvs;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -2506,7 +2505,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 	{
 		Vector3 *facesw = faces.ptrw();
 		Vector2 *uvsw = uvs.ptrw();
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 		int *ngonw = ngons.ptrw();
@@ -2550,7 +2549,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 				uvsw[face * 3 + 1] = u[1];
 				uvsw[face * 3 + 2] = u[2];
 
-				smoothw[face] = false;
+				smoothw[face] = 0;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
 				ngonw[face] = ngon_counter;
@@ -2565,7 +2564,7 @@ CSGBrush *CSGBox3D::_build_brush() {
 				uvsw[face * 3 + 1] = u[3];
 				uvsw[face * 3 + 2] = u[0];
 
-				smoothw[face] = false;
+				smoothw[face] = 0;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
 				ngonw[face] = ngon_counter;
@@ -2661,7 +2660,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 
 	Vector<Vector3> faces;
 	Vector<Vector2> uvs;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -2678,7 +2677,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 	{
 		Vector3 *facesw = faces.ptrw();
 		Vector2 *uvsw = uvs.ptrw();
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 
@@ -2726,7 +2725,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 				uvsw[face * 3 + 1] = u[1];
 				uvsw[face * 3 + 2] = u[2];
 
-				smoothw[face] = smooth_faces;
+				smoothw[face] = smooth_faces ? 1 : 0;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
 
@@ -2744,7 +2743,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 					uvsw[face * 3 + 1] = u[3];
 					uvsw[face * 3 + 2] = u[0];
 
-					smoothw[face] = smooth_faces;
+					smoothw[face] = smooth_faces ? 1 : 0;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 
@@ -2764,7 +2763,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 				uvsw[face * 3 + 1] = Vector2(face_points[0].x, face_points[0].y) * 0.5 + Vector2(0.5, 0.5);
 				uvsw[face * 3 + 2] = Vector2(0.5, 0.5);
 
-				smoothw[face] = false;
+				smoothw[face] = 2;
 				invertw[face] = invert_val;
 				materialsw[face] = base_material;
 				ngonw[face] = 0;
@@ -2780,7 +2779,7 @@ CSGBrush *CSGCylinder3D::_build_brush() {
 					uvsw[face * 3 + 1] = Vector2(face_points[0].x, face_points[0].y) * 0.5 + Vector2(0.5, 0.5);
 					uvsw[face * 3 + 2] = Vector2(0.5, 0.5);
 
-					smoothw[face] = false;
+					smoothw[face] = 2;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 					ngonw[face] = 1;
@@ -2932,7 +2931,7 @@ CSGBrush *CSGTorus3D::_build_brush() {
 
 	Vector<Vector3> faces;
 	Vector<Vector2> uvs;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -2949,7 +2948,7 @@ CSGBrush *CSGTorus3D::_build_brush() {
 	{
 		Vector3 *facesw = faces.ptrw();
 		Vector2 *uvsw = uvs.ptrw();
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 
@@ -3008,7 +3007,7 @@ CSGBrush *CSGTorus3D::_build_brush() {
 					uvsw[face * 3 + 1] = u[2];
 					uvsw[face * 3 + 2] = u[1];
 
-					smoothw[face] = smooth_faces;
+					smoothw[face] = smooth_faces ? 1 : 0;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 
@@ -3025,7 +3024,7 @@ CSGBrush *CSGTorus3D::_build_brush() {
 					uvsw[face * 3 + 1] = u[2];
 					uvsw[face * 3 + 2] = u[0];
 
-					smoothw[face] = smooth_faces;
+					smoothw[face] = smooth_faces ? 1 : 0;
 					invertw[face] = invert_val;
 					materialsw[face] = base_material;
 
@@ -3236,7 +3235,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 
 	Vector<Vector3> faces;
 	Vector<Vector2> uvs;
-	Vector<bool> smooth;
+	Vector<int> smooth;
 	Vector<Ref<Material>> materials;
 	Vector<bool> invert;
 
@@ -3253,7 +3252,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 	{
 		Vector3 *facesw = faces.ptrw();
 		Vector2 *uvsw = uvs.ptrw();
-		bool *smoothw = smooth.ptrw();
+		int *smoothw = smooth.ptrw();
 		Ref<Material> *materialsw = materials.ptrw();
 		bool *invertw = invert.ptrw();
 
@@ -3339,7 +3338,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 					uvsw[face * 3 + face_vertex_idx] = uv;
 				}
 
-				smoothw[face] = false;
+				smoothw[face] = 2;
 				materialsw[face] = base_material;
 				invertw[face] = flip_faces;
 				ngonw[face] = ngon_counter;
@@ -3457,7 +3456,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 				uvsw[face * 3 + 1] = u[1];
 				uvsw[face * 3 + 2] = u[2];
 
-				smoothw[face] = smooth_faces;
+				smoothw[face] = smooth_faces ? 1 : 0;
 				invertw[face] = flip_faces;
 				materialsw[face] = base_material;
 				ngonw[face] = ngon_counter;
@@ -3473,7 +3472,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 				uvsw[face * 3 + 1] = u[3];
 				uvsw[face * 3 + 2] = u[0];
 
-				smoothw[face] = smooth_faces;
+				smoothw[face] = smooth_faces ? 1 : 0;
 				invertw[face] = flip_faces;
 				materialsw[face] = base_material;
 				ngonw[face] = ngon_counter;
@@ -3499,7 +3498,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 					uvsw[face * 3 + face_vertex_idx] = uv;
 				}
 
-				smoothw[face] = false;
+				smoothw[face] = 2;
 				materialsw[face] = base_material;
 				invertw[face] = flip_faces;
 				ngonw[face] = ngon_counter;

@@ -147,8 +147,8 @@ public:
 	void flip_x(const Vector<int> &p_faces);
 	void flip_y(const Vector<int> &p_faces);
 	void calculate_cube_map(const Vector<int> &p_faces);
-	void set_csg_face_smooth(const Vector<int> &p_faces, bool p_smooth);
-	bool is_csg_face_smooth(int p_face);
+	void set_csg_face_smooth_group(const Vector<int> &p_faces, int p_smooth);
+	int get_csg_face_smooth_group(int p_face);
 	// These change material.
 	void set_face_material(const Vector<int> &p_faces, const Ref<Material> &p_material);
 	Ref<Material> get_face_material(int p_face);
@@ -251,7 +251,7 @@ class CSGPrimitive3D : public CSGShape3D {
 
 protected:
 	bool flip_faces;
-	CSGBrush *_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<bool> &p_smooth, const Vector<Ref<Material>> &p_materials);
+	CSGBrush *_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials);
 	static void _bind_methods();
 
 public:

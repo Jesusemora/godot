@@ -49,6 +49,7 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 		node = nullptr;
 		options->hide();
 		rebuild_csg->hide();
+		cubemap_uvs->hide();
 	}
 }
 
@@ -57,13 +58,16 @@ void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 	if (node) {
 		if (node->is_root_shape()) {
 			options->show();
+			cubemap_uvs->hide();
 		} else {
 			options->hide();
+			cubemap_uvs->show();
 		}
 		rebuild_csg->show();
 	} else {
 		options->hide();
 		rebuild_csg->hide();
+		cubemap_uvs->hide();
 	}
 }
 
@@ -160,11 +164,21 @@ void CSGShapeEditor::_create_baked_collision_shape() {
 }
 
 void CSGShapeEditor::_rebuild_brush() {
-	node->rebuild_brush();
 	EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
+	Dictionary dict = node->get_csg_brush();
 	ur->create_action(TTR("Rebuild CSG Brush"));
 	ur->add_do_method(node, "rebuild_brush");
-	ur->add_undo_method(node, "set_csg_brush", node->get_csg_brush());
+	ur->add_undo_method(node, "set_csg_brush", dict);
+	ur->commit_action();
+}
+
+void CSGShapeEditor::_makecubeuv() {
+	// This is just too practical to not have it as a button.
+	EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
+	Dictionary dict = node->get_csg_brush();
+	ur->create_action(TTR("Make Cube"));
+	ur->add_do_method(node, "calculate_cube_map", node->get_all_csg_faces());
+	ur->add_undo_method(node, "set_csg_brush", dict);
 	ur->commit_action();
 }
 
@@ -191,6 +205,13 @@ CSGShapeEditor::CSGShapeEditor() {
 	rebuild_csg->set_flat(false);
 	Node3DEditor::get_singleton()->add_control_to_menu_panel(rebuild_csg);
 	rebuild_csg->connect(SceneStringName(pressed), callable_mp(this, &CSGShapeEditor::_rebuild_brush));
+
+	cubemap_uvs = memnew(Button);
+	cubemap_uvs->hide();
+	cubemap_uvs->set_text(TTR("Make cube uv"));
+	cubemap_uvs->set_flat(false);
+	Node3DEditor::get_singleton()->add_control_to_menu_panel(cubemap_uvs);
+	cubemap_uvs->connect(SceneStringName(pressed), callable_mp(this, &CSGShapeEditor::_makecubeuv));
 }
 
 ///////////
@@ -450,7 +471,7 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 				for (int j = 0; j < local_edges.size() / 2; j++) {
 					for (int k = j + 1; k < local_edges.size() / 2; k++) {
 						// TODO Simplify.
-						bool comp_edges = (local_edges[j * 2] == local_edges[k * 2] && local_edges[j * 2 + 1] == local_edges[k * 2 + 1]) && (local_edges[j * 2] == local_edges[k * 2 + 1] && local_edges[j * 2 + 1] == local_edges[k * 2]);
+						bool comp_edges = (local_edges[j * 2].is_equal_approx(local_edges[k * 2]) && local_edges[j * 2 + 1].is_equal_approx(local_edges[k * 2 + 1])) && (local_edges[j * 2].is_equal_approx(local_edges[k * 2 + 1]) && local_edges[j * 2 + 1].is_equal_approx(local_edges[k * 2]));
 						if (!comp_edges) {
 							temp_edges.push_back(local_edges[j * 2]);
 							temp_edges.push_back(local_edges[j * 2 + 1]);

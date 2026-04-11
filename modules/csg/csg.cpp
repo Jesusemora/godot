@@ -32,7 +32,7 @@
 
 // CSGBrush
 
-void CSGBrush::build_from_faces(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uvs, const Vector<bool> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<bool> &p_flip_faces) {
+void CSGBrush::build_from_faces(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uvs, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<bool> &p_flip_faces) {
 	faces.clear();
 
 	int vc = p_vertices.size();
@@ -43,7 +43,7 @@ void CSGBrush::build_from_faces(const Vector<Vector3> &p_vertices, const Vector<
 	int uvc = p_uvs.size();
 	const Vector2 *ruv = p_uvs.ptr();
 	int sc = p_smooth.size();
-	const bool *rs = p_smooth.ptr();
+	const int *rs = p_smooth.ptr();
 	int mc = p_materials.size();
 	const Ref<Material> *rm = p_materials.ptr();
 	int ic = p_flip_faces.size();
@@ -68,7 +68,7 @@ void CSGBrush::build_from_faces(const Vector<Vector3> &p_vertices, const Vector<
 		if (sc == vc / 3) {
 			f.smooth = rs[i];
 		} else {
-			f.smooth = false;
+			f.smooth = 0;
 		}
 
 		if (ic == vc / 3) {
