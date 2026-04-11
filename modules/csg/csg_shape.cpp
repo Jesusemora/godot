@@ -1995,7 +1995,7 @@ CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_ver
 	ngons.resize(new_brush->faces.size());
 	{
 		// Create perfect quads.
-		ERR_FAIL_COND_V(!new_brush->faces.size() > 0, new_brush);
+		ERR_FAIL_COND_V(!(new_brush->faces.size() > 0), new_brush);
 		int ngon_counter = 0;
 		ngons.write[0] = ngon_counter;
 		Vector3 f_vert = new_brush->faces[0].vertices[0];

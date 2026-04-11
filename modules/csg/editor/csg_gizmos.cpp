@@ -467,7 +467,7 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 		for (int i = 0; i < temp_edges.size() / 2; i++) {
 			bool found_edge = false;
 			for (int j = 0; j < lines.size() / 2; j++) {
-				if (temp_edges[i * 2].is_equal_aprox(lines[j * 2]) && temp_edges[i * 2 + 1].is_equal_aprox(lines[j * 2 + 1]) && temp_edges[i * 2].is_equal_aprox(lines[j * 2 + 1]) && temp_edges[i * 2 + 1].is_equal_aprox(lines[j * 2])) {
+				if (temp_edges[i * 2].is_equal_approx(lines[j * 2]) && temp_edges[i * 2 + 1].is_equal_approx(lines[j * 2 + 1]) && temp_edges[i * 2].is_equal_approx(lines[j * 2 + 1]) && temp_edges[i * 2 + 1].is_equal_approx(lines[j * 2])) {
 					found_edge = true;
 					break;
 				}
