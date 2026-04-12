@@ -975,6 +975,13 @@ void CSGShape3D::_notification(int p_what) {
 			last_visible = is_visible();
 		} break;
 
+		case NOTIFICATION_READY: {
+			// Trying to make the brush build only once all children are inside the tree.
+			if (is_root_shape()) {
+				rebuild();
+			}
+		} break;
+
 		case NOTIFICATION_UNPARENTED: {
 			if (!is_root_shape()) {
 				// Update this node and its previous parent only if it's currently being removed from another CSG shape
