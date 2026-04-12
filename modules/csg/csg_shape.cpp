@@ -507,7 +507,7 @@ struct ManifoldOperation {
 };
 
 CSGBrush *CSGShape3D::_get_brush() {
-	if (!dirty || !is_inside_tree()) {
+	if (!dirty) {
 		return brush;
 	}
 	if (brush) {
@@ -970,8 +970,6 @@ void CSGShape3D::_notification(int p_what) {
 					set_base(RID());
 					root_mesh.unref();
 					_make_painted();
-				} else {
-					rebuild_brush();
 				}
 			}
 			last_visible = is_visible();
@@ -1018,7 +1016,7 @@ void CSGShape3D::_notification(int p_what) {
 				set_collision_mask(collision_mask);
 				set_collision_priority(collision_priority);
 				debug_shape_old_transform = get_global_transform();
-				_make_painted();
+				rebuild_brush();
 			}
 		} break;
 
