@@ -1942,6 +1942,7 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_calculating_tangents"), &CSGShape3D::is_calculating_tangents);
 
 	ClassDB::bind_method(D_METHOD("rebuild_brush"), &CSGShape3D::rebuild_brush);
+	ClassDB::bind_method(D_METHOD("brush_modified"), &CSGShape3D::brush_modified);
 	ClassDB::bind_method(D_METHOD("set_csg_brush", "csg_brush"), &CSGShape3D::set_csg_brush);
 	ClassDB::bind_method(D_METHOD("get_csg_brush"), &CSGShape3D::get_csg_brush);
 	ClassDB::bind_method(D_METHOD("set_uv_offsets", "faces", "prev_offset", "p_offset"), &CSGShape3D::set_uv_offsets);
@@ -1952,6 +1953,7 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("flip_x", "faces"), &CSGShape3D::flip_x);
 	ClassDB::bind_method(D_METHOD("flip_y", "faces"), &CSGShape3D::flip_y);
 	ClassDB::bind_method(D_METHOD("calculate_cube_map", "faces"), &CSGShape3D::calculate_cube_map);
+	ClassDB::bind_method(D_METHOD("calculate_cylinder_map", "faces"), &CSGShape3D::calculate_cylinder_map);
 	ClassDB::bind_method(D_METHOD("set_csg_face_smooth_group", "faces", "smooth"), &CSGShape3D::set_csg_face_smooth_group);
 	ClassDB::bind_method(D_METHOD("get_csg_face_smooth_group", "face"), &CSGShape3D::get_csg_face_smooth_group);
 	ClassDB::bind_method(D_METHOD("set_face_material", "faces", "material"), &CSGShape3D::set_face_material);
@@ -2052,7 +2054,7 @@ void CSGPrimitive3D::set_flip_faces(bool p_invert) {
 
 	flip_faces = p_invert;
 
-	if ((is_painted() && p_invert) || (!is_root_shape() && is_inside_tree())) {
+	if (!is_root_shape() && is_inside_tree()) {
 		set_csg_invert(flip_faces);
 	}
 

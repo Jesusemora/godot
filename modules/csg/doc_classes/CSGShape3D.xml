@@ -29,11 +29,25 @@
 				[b]Note:[/b] CSG mesh data updates are deferred, which means they are updated with a delay of one rendered frame. To avoid getting an empty mesh or outdated mesh data, make sure to call [code]await get_tree().process_frame[/code] before using [method bake_static_mesh] in [method Node._ready] or after changing properties on the [CSGShape3D].
 			</description>
 		</method>
+		<method name="brush_modified">
+			<return type="void" />
+			<description>
+				Forces an update of the root csg shape visuals. When used on a root shape, it rebuilds the brush.
+				This is meant to be called after [code]set_csg_brush[/code].
+			</description>
+		</method>
 		<method name="calculate_cube_map">
 			<return type="void" />
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Generates cube map UVs for the selected faces. This is a simple unwrapping that calculates the UVs based on the direction of the face.
+			</description>
+		</method>
+		<method name="calculate_cylinder_map">
+			<return type="void" />
+			<param index="0" name="faces" type="PackedInt32Array" />
+			<description>
+				Generates cylinder UVs for the selected faces. This is a simple unwrapping that calculates the side UVs based on the angle from the center.
 			</description>
 		</method>
 		<method name="flip_x">
