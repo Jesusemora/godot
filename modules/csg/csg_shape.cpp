@@ -978,7 +978,7 @@ void CSGShape3D::_notification(int p_what) {
 		case NOTIFICATION_READY: {
 			// Trying to make the brush build only once all children are inside the tree.
 			if (is_root_shape()) {
-				rebuild();
+				rebuild_brush();
 			}
 		} break;
 
