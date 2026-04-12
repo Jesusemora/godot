@@ -507,7 +507,7 @@ struct ManifoldOperation {
 };
 
 CSGBrush *CSGShape3D::_get_brush() {
-	if (!dirty) {
+	if (!dirty || !is_inside_tree()) {
 		return brush;
 	}
 	if (brush) {
@@ -1494,7 +1494,7 @@ void CSGShape3D::calculate_cylinder_map(const Vector<int> &p_faces) {
 
 		Plane ang(v1, v2, v3);
 		Vector3 start_vec = Vector3(1.0, 0.0, 0.0);
-		if (Math::abs(ang.normal.y) > 0) {
+		if (Math::abs(ang.normal.y) > 0.6) {
 			// Top and bottom faces.
 			float mir_x = ang.normal.x < 0.0 ? -1.0 : 1.0;
 			n->faces.write[p].uvs[0] = Vector2(mir_x * v1.x, v1.z);
@@ -1503,8 +1503,8 @@ void CSGShape3D::calculate_cylinder_map(const Vector<int> &p_faces) {
 		} else {
 			float shift_x = ang.normal.z < 0.0 ? -1.0 : 1.0;
 			Vector3 t_ang_1 = Vector3(v1.x, 0.0, v1.z).normalized();
-			Vector3 t_ang_2 = Vector3(v1.x, 0.0, v1.z).normalized();
-			Vector3 t_ang_3 = Vector3(v1.x, 0.0, v1.z).normalized();
+			Vector3 t_ang_2 = Vector3(v2.x, 0.0, v2.z).normalized();
+			Vector3 t_ang_3 = Vector3(v3.x, 0.0, v3.z).normalized();
 			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_1), v1.y));
 			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_2), v2.y));
 			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_3), v3.y));
