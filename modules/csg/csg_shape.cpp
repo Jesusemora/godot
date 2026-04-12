@@ -971,8 +971,7 @@ void CSGShape3D::_notification(int p_what) {
 					root_mesh.unref();
 					_make_painted();
 				} else {
-					// I have a theory the linux build doesn't pass the test because this runs before the children are ready.
-					callable_mp(this, &CSGShape3D::rebuild_brush).call_deferred();
+					rebuild_brush();
 				}
 			}
 			last_visible = is_visible();
