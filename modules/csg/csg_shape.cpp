@@ -2164,7 +2164,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 					if (!prev_tri_normal.is_equal_approx(normal[0])) {
 						ngon_counter++;
 					}
-					prev_tri_normal = normal;
+					prev_tri_normal = normal[0];
 				} else {
 					prev_tri_normal = Vector3(0, 0, 0);
 					ngon_counter++;
@@ -2221,7 +2221,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 					if (!prev_tri_normal.is_equal_approx(normal[0])) {
 						ngon_counter++;
 					}
-					prev_tri_normal = normal;
+					prev_tri_normal = normal[0];
 				} else {
 					prev_tri_normal = Vector3(0, 0, 0);
 					ngon_counter++;
