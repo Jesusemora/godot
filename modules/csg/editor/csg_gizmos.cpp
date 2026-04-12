@@ -50,6 +50,7 @@ void CSGShapeEditor::_node_removed(Node *p_node) {
 		options->hide();
 		rebuild_csg->hide();
 		cubemap_uvs->hide();
+		cylinder_uvs->hide();
 	}
 }
 
@@ -59,15 +60,18 @@ void CSGShapeEditor::edit(CSGShape3D *p_csg_shape) {
 		if (node->is_root_shape()) {
 			options->show();
 			cubemap_uvs->hide();
+			cylinder_uvs->hide();
 		} else {
 			options->hide();
 			cubemap_uvs->show();
+			cylinder_uvs->show();
 		}
 		rebuild_csg->show();
 	} else {
 		options->hide();
 		rebuild_csg->hide();
 		cubemap_uvs->hide();
+		cylinder_uvs->hide();
 	}
 }
 
@@ -169,6 +173,7 @@ void CSGShapeEditor::_rebuild_brush() {
 	ur->create_action(TTR("Rebuild CSG Brush"));
 	ur->add_do_method(node, "rebuild_brush");
 	ur->add_undo_method(node, "set_csg_brush", dict);
+	ur->add_undo_method(node, "brush_modified");
 	ur->commit_action();
 }
 
@@ -179,6 +184,17 @@ void CSGShapeEditor::_makecubeuv() {
 	ur->create_action(TTR("Make Cube"));
 	ur->add_do_method(node, "calculate_cube_map", node->get_all_csg_faces());
 	ur->add_undo_method(node, "set_csg_brush", dict);
+	ur->add_undo_method(node, "brush_modified");
+	ur->commit_action();
+}
+
+void CSGShapeEditor::_makecylinderuv() {
+	EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
+	Dictionary dict = node->get_csg_brush();
+	ur->create_action(TTR("Make Cylinder"));
+	ur->add_do_method(node, "calculate_cylinder_map", node->get_all_csg_faces());
+	ur->add_undo_method(node, "set_csg_brush", dict);
+	ur->add_undo_method(node, "brush_modified");
 	ur->commit_action();
 }
 
@@ -212,6 +228,13 @@ CSGShapeEditor::CSGShapeEditor() {
 	cubemap_uvs->set_flat(false);
 	Node3DEditor::get_singleton()->add_control_to_menu_panel(cubemap_uvs);
 	cubemap_uvs->connect(SceneStringName(pressed), callable_mp(this, &CSGShapeEditor::_makecubeuv));
+
+	cylinder_uvs = memnew(Button);
+	cylinder_uvs->hide();
+	cylinder_uvs->set_text(TTR("Make cylinder uv"));
+	cylinder_uvs->set_flat(false);
+	Node3DEditor::get_singleton()->add_control_to_menu_panel(cylinder_uvs);
+	cylinder_uvs->connect(SceneStringName(pressed), callable_mp(this, &CSGShapeEditor::_makecylinderuv));
 }
 
 ///////////
@@ -439,48 +462,31 @@ void CSGShape3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 		if (local_csg_faces.is_empty()) {
 			skip = true;
 		}
-		// TODO Optimize.
 		Vector<Vector3> temp_edges;
 		for (int i = 0; i < local_csg_faces.size(); i++) {
-			Vector<Vector3> local_edges;
 			Vector<Vector3> curr_ngon = local_csg_faces[i];
 			// Convert to lines.
 			if (curr_ngon.size() == 6) {
 				// Quad.
-				local_edges.resize(8);
-				local_edges.write[0] = curr_ngon[0];
-				local_edges.write[1] = curr_ngon[1];
-				local_edges.write[2] = curr_ngon[1];
-				local_edges.write[3] = curr_ngon[2];
-				local_edges.write[4] = curr_ngon[3];
-				local_edges.write[5] = curr_ngon[4];
-				local_edges.write[6] = curr_ngon[4];
-				local_edges.write[7] = curr_ngon[5];
+				temp_edges.push_back(curr_ngon[0]);
+				temp_edges.push_back(curr_ngon[1]);
+				temp_edges.push_back(curr_ngon[1]);
+				temp_edges.push_back(curr_ngon[2]);
+				temp_edges.push_back(curr_ngon[3]);
+				temp_edges.push_back(curr_ngon[4]);
+				temp_edges.push_back(curr_ngon[4]);
+				temp_edges.push_back(curr_ngon[5]);
+			} else if (curr_ngon.size() > 6) {
+				// Since the only way to generate Ngons is through CSG building and they are always surrounded by quads, we just skip the ngons.
+				continue;
 			} else {
-				// Tri and Ngon.
+				// Tris.
 				for (int j = 0; j < curr_ngon.size() / 3; j++) {
 					for (int k = 0; k < 3; k++) {
 						int k_n = (k + 1) % 3;
-						local_edges.push_back(curr_ngon[j * 3 + k]);
-						local_edges.push_back(curr_ngon[j * 3 + k_n]);
+						temp_edges.push_back(curr_ngon[j * 3 + k]);
+						temp_edges.push_back(curr_ngon[j * 3 + k_n]);
 					}
-				}
-			}
-			if (curr_ngon.size() > 6) {
-				// Remove doubles inside ngon.
-				for (int j = 0; j < local_edges.size() / 2; j++) {
-					for (int k = j + 1; k < local_edges.size() / 2; k++) {
-						// TODO Simplify.
-						bool comp_edges = (local_edges[j * 2].is_equal_approx(local_edges[k * 2]) && local_edges[j * 2 + 1].is_equal_approx(local_edges[k * 2 + 1])) && (local_edges[j * 2].is_equal_approx(local_edges[k * 2 + 1]) && local_edges[j * 2 + 1].is_equal_approx(local_edges[k * 2]));
-						if (!comp_edges) {
-							temp_edges.push_back(local_edges[j * 2]);
-							temp_edges.push_back(local_edges[j * 2 + 1]);
-						}
-					}
-				}
-			} else {
-				for (int j = 0; j < local_edges.size(); j++) {
-					temp_edges.push_back(local_edges[j]);
 				}
 			}
 		}

@@ -1101,6 +1101,11 @@ void CSGShape3D::rebuild_brush() {
 	_make_dirty();
 }
 
+void CSGShape3D::brush_modified() {
+	// This is an interface to _make_painted() since set_csg_brush() doesn't call it and that causes issues with undo.
+	_make_painted();
+}
+
 Dictionary CSGShape3D::get_csg_brush() {
 	Dictionary p_brush_data;
 	p_brush_data["painted"] = painted;
@@ -1458,10 +1463,51 @@ void CSGShape3D::calculate_cube_map(const Vector<int> &p_faces) {
 			n->faces.write[p].uvs[2] = Vector2(mir_x * v3.x, v3.z);
 		} else {
 			// Direction Z, XY.
-			float mir_x = ang.normal.z < 0.0 ? -1.0 : 1.0;
+			float mir_x = ang.normal.z < 0.0 ? 1.0 : -1.0;
 			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(mir_x * v1.x, v1.y));
 			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(mir_x * v2.x, v2.y));
 			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(mir_x * v3.x, v3.y));
+		}
+	}
+	_make_painted(true);
+}
+
+void CSGShape3D::calculate_cylinder_map(const Vector<int> &p_faces) {
+	// Simple cylinder unwrapping.
+	CSGBrush *n = _get_brush();
+	ERR_FAIL_NULL_MSG(n, "Cannot get CSGBrush.");
+
+	if (n->faces.is_empty()) {
+		return;
+	}
+
+	// 3D goes bot to top while 2D goes top to bottom.
+	Transform2D p_rotation = Transform2D(Math::deg_to_rad(180.0), Vector2(0.0, 0.0));
+
+	for (int i = 0; i < p_faces.size(); i++) {
+		int p = p_faces[i];
+		ERR_FAIL_INDEX(p, n->faces.size());
+
+		Vector3 v1 = n->faces[p].vertices[0];
+		Vector3 v2 = n->faces[p].vertices[1];
+		Vector3 v3 = n->faces[p].vertices[2];
+
+		Plane ang(v1, v2, v3);
+		Vector3 start_vec = Vector3(1.0, 0.0, 0.0);
+		if (Math::abs(ang.normal.y) > 0) {
+			// Top and bottom faces.
+			float mir_x = ang.normal.x < 0.0 ? -1.0 : 1.0;
+			n->faces.write[p].uvs[0] = Vector2(mir_x * v1.x, v1.z);
+			n->faces.write[p].uvs[1] = Vector2(mir_x * v2.x, v2.z);
+			n->faces.write[p].uvs[2] = Vector2(mir_x * v3.x, v3.z);
+		} else {
+			float shift_x = ang.normal.z < 0.0 ? -1.0 : 1.0;
+			Vector3 t_ang_1 = Vector3(v1.x, 0.0, v1.z).normalized();
+			Vector3 t_ang_2 = Vector3(v1.x, 0.0, v1.z).normalized();
+			Vector3 t_ang_3 = Vector3(v1.x, 0.0, v1.z).normalized();
+			n->faces.write[p].uvs[0] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_1), v1.y));
+			n->faces.write[p].uvs[1] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_2), v2.y));
+			n->faces.write[p].uvs[2] = p_rotation.xform(Vector2(shift_x * start_vec.dot(t_ang_3), v3.y));
 		}
 	}
 	_make_painted(true);
@@ -1841,7 +1887,7 @@ PackedStringArray CSGShape3D::get_configuration_warnings() const {
 	const CSGShape3D *current_shape = this;
 	while (current_shape) {
 		if (!current_shape->brush || current_shape->brush->faces.is_empty()) {
-			warnings.push_back(RTR("The CSGShape3D has an empty shape.\nCSGShape3D empty shapes typically occur because the mesh is not manifold.\nA manifold mesh forms a solid object without gaps, holes, or loose edges.\nEach edge must be a member of exactly two faces."));
+			warnings.push_back(RTR("The CSGShape3D has an empty shape.\nCSGShape3D empty shapes typically occur because the mesh is not manifold.\nA manifold mesh forms a solid object without gaps, holes, or loose edges.\nEach edge must be a member of exactly two faces.\nThis can also happen when using a CSGCombiner3D as child of another CSG node. CSGCombiner3D should only be used as the parent of other CSG nodes."));
 			break;
 		}
 		current_shape = current_shape->parent_shape;
@@ -1974,7 +2020,7 @@ CSGCombiner3D::CSGCombiner3D() {
 
 /////////////////////
 
-CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials) {
+CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<int> &ngons) {
 	CSGBrush *new_brush = memnew(CSGBrush);
 
 	Vector<bool> invert;
@@ -1987,27 +2033,6 @@ CSGBrush *CSGPrimitive3D::_create_brush_from_arrays(const Vector<Vector3> &p_ver
 		}
 	}
 	new_brush->build_from_faces(p_vertices, p_uv, p_smooth, p_materials, invert);
-
-	// Meshes are imported as triangles so there's no way to use quads from here.
-	Vector<int> ngons;
-	ngons.resize(new_brush->faces.size());
-	{
-		// Create perfect quads.
-		ERR_FAIL_COND_V(!(new_brush->faces.size() > 0), new_brush);
-		int ngon_counter = 0;
-		ngons.write[0] = ngon_counter;
-		Vector3 f_vert = new_brush->faces[0].vertices[0];
-		Vector3 l_vert = new_brush->faces[0].vertices[2];
-		for (int i = 1; i < ngons.size(); i++) {
-			if (!f_vert.is_equal_approx(new_brush->faces[i].vertices[2]) || !l_vert.is_equal_approx(new_brush->faces[i].vertices[0])) {
-				ngon_counter++;
-			}
-			ngons.write[i] = ngon_counter;
-			f_vert = new_brush->faces[i].vertices[0];
-			l_vert = new_brush->faces[i].vertices[2];
-		}
-	}
-
 	new_brush->add_ngons(ngons);
 
 	return new_brush;
@@ -2054,6 +2079,9 @@ CSGBrush *CSGMesh3D::_build_brush() {
 	Vector<Ref<Material>> materials;
 	Vector<Vector2> uvs;
 	Ref<Material> base_material = get_material();
+	Vector<int> ngons;
+
+	int ngon_counter = 0;
 
 	for (int i = 0; i < mesh->get_surface_count(); i++) {
 		if (mesh->surface_get_primitive_type(i) != Mesh::PRIMITIVE_TRIANGLES) {
@@ -2102,13 +2130,17 @@ CSGBrush *CSGMesh3D::_build_brush() {
 			smooth.resize((as + is) / 3);
 			materials.resize((as + is) / 3);
 			uvs.resize(as + is);
+			ngons.resize((as + is) / 3);
 
 			Vector3 *vw = vertices.ptrw();
 			int *sw = smooth.ptrw();
 			Vector2 *uvw = uvs.ptrw();
 			Ref<Material> *mw = materials.ptrw();
+			int *ngonw = ngons.ptrw();
 
 			const int *ir = aindices.ptr();
+
+			Vector3 prev_tri_normal = Vector3(0, 0, 0);
 
 			for (int j = 0; j < is; j += 3) {
 				Vector3 vertex[3];
@@ -2127,6 +2159,17 @@ CSGBrush *CSGMesh3D::_build_brush() {
 				}
 
 				bool flat = normal[0].is_equal_approx(normal[1]) && normal[0].is_equal_approx(normal[2]);
+
+				if (flat) {
+					if (!prev_tri_normal.is_equal_approx(normal[0])) {
+						ngon_counter++;
+					}
+					prev_tri_normal = normal;
+				} else {
+					prev_tri_normal = Vector3(0, 0, 0);
+					ngon_counter++;
+				}
+				ngonw[(as + j) / 3] = ngon_counter;
 
 				vw[as + j + 0] = vertex[0];
 				vw[as + j + 1] = vertex[1];
@@ -2147,11 +2190,15 @@ CSGBrush *CSGMesh3D::_build_brush() {
 			smooth.resize((as + is) / 3);
 			uvs.resize(as + is);
 			materials.resize((as + is) / 3);
+			ngons.resize((as + is) / 3);
 
 			Vector3 *vw = vertices.ptrw();
 			int *sw = smooth.ptrw();
 			Vector2 *uvw = uvs.ptrw();
 			Ref<Material> *mw = materials.ptrw();
+			int *ngonw = ngons.ptrw();
+
+			Vector3 prev_tri_normal = Vector3(0, 0, 0);
 
 			for (int j = 0; j < is; j += 3) {
 				Vector3 vertex[3];
@@ -2169,6 +2216,17 @@ CSGBrush *CSGMesh3D::_build_brush() {
 				}
 
 				bool flat = normal[0].is_equal_approx(normal[1]) && normal[0].is_equal_approx(normal[2]);
+
+				if (flat) {
+					if (!prev_tri_normal.is_equal_approx(normal[0])) {
+						ngon_counter++;
+					}
+					prev_tri_normal = normal;
+				} else {
+					prev_tri_normal = Vector3(0, 0, 0);
+					ngon_counter++;
+				}
+				ngonw[(as + j) / 3] = ngon_counter;
 
 				vw[as + j + 0] = vertex[0];
 				vw[as + j + 1] = vertex[1];
@@ -2188,7 +2246,7 @@ CSGBrush *CSGMesh3D::_build_brush() {
 		return memnew(CSGBrush);
 	}
 
-	return _create_brush_from_arrays(vertices, uvs, smooth, materials);
+	return _create_brush_from_arrays(vertices, uvs, smooth, materials, ngons);
 }
 
 void CSGMesh3D::_mesh_changed() {
@@ -2446,8 +2504,10 @@ int CSGSphere3D::get_rings() const {
 }
 
 void CSGSphere3D::set_smooth_faces(const bool p_smooth_faces) {
-	set_csg_flat(p_smooth_faces);
 	smooth_faces = p_smooth_faces;
+	if (is_inside_tree()) {
+		set_csg_flat(smooth_faces);
+	}
 	_make_painted();
 }
 
@@ -3117,8 +3177,10 @@ int CSGTorus3D::get_ring_sides() const {
 }
 
 void CSGTorus3D::set_smooth_faces(const bool p_smooth_faces) {
-	set_csg_flat(p_smooth_faces);
 	smooth_faces = p_smooth_faces;
+	if (is_inside_tree()) {
+		set_csg_flat(smooth_faces);
+	}
 	_make_painted();
 }
 

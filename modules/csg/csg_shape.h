@@ -136,6 +136,7 @@ protected:
 public:
 	void get_csg_children_recursive(Vector<CSGShape3D *> &p_nodes);
 	void rebuild_brush();
+	void brush_modified();
 	Dictionary get_csg_brush();
 	void set_csg_brush(const Dictionary &p_brush_data);
 	// These work on selected faces.
@@ -147,6 +148,7 @@ public:
 	void flip_x(const Vector<int> &p_faces);
 	void flip_y(const Vector<int> &p_faces);
 	void calculate_cube_map(const Vector<int> &p_faces);
+	void calculate_cylinder_map(const Vector<int> &p_faces);
 	void set_csg_face_smooth_group(const Vector<int> &p_faces, int p_smooth);
 	int get_csg_face_smooth_group(int p_face);
 	// These change material.
@@ -251,7 +253,7 @@ class CSGPrimitive3D : public CSGShape3D {
 
 protected:
 	bool flip_faces;
-	CSGBrush *_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials);
+	CSGBrush *_create_brush_from_arrays(const Vector<Vector3> &p_vertices, const Vector<Vector2> &p_uv, const Vector<int> &p_smooth, const Vector<Ref<Material>> &p_materials, const Vector<int> &ngons);
 	static void _bind_methods();
 
 public:

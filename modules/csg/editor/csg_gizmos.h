@@ -73,6 +73,7 @@ class CSGShapeEditor : public Control {
 	MenuButton *options = nullptr;
 	Button *rebuild_csg = nullptr;
 	Button *cubemap_uvs = nullptr;
+	Button *cylinder_uvs = nullptr;
 	AcceptDialog *err_dialog = nullptr;
 
 	void _menu_option(int p_option);
@@ -82,6 +83,7 @@ class CSGShapeEditor : public Control {
 
 	void _rebuild_brush();
 	void _makecubeuv();
+	void _makecylinderuv();
 
 protected:
 	void _node_removed(Node *p_node);
