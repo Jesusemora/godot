@@ -1016,7 +1016,7 @@ void CSGShape3D::_notification(int p_what) {
 				set_collision_mask(collision_mask);
 				set_collision_priority(collision_priority);
 				debug_shape_old_transform = get_global_transform();
-				rebuild_brush();
+				_make_painted();
 			}
 		} break;
 
@@ -1173,7 +1173,6 @@ void CSGShape3D::set_csg_brush(const Dictionary &p_brush_data) {
 
 	if (!p_brush_data["painted"]) {
 		// Brush has not been modified or is root shape. Rebuild brush.
-		dirty = true;
 		return;
 	}
 
