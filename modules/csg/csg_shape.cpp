@@ -976,7 +976,7 @@ void CSGShape3D::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_READY: {
-			// Build the brush build only once all children are inside the tree.
+			// Build the brush only once all children are inside the tree.
 			if (is_root_shape()) {
 				rebuild_brush();
 			}
@@ -3191,7 +3191,9 @@ void CSGTorus3D::_bind_methods() {
 
 void CSGTorus3D::set_inner_radius(const float p_inner_radius) {
 	inner_radius = p_inner_radius;
-	resize_brush_rework();
+	if (is_painted()) {
+		resize_brush_rework();
+	}
 	_make_painted();
 	update_gizmos();
 }
@@ -3202,7 +3204,9 @@ float CSGTorus3D::get_inner_radius() const {
 
 void CSGTorus3D::set_outer_radius(const float p_outer_radius) {
 	outer_radius = p_outer_radius;
-	resize_brush_rework();
+	if (is_painted()) {
+		resize_brush_rework();
+	}
 	_make_painted();
 	update_gizmos();
 }
@@ -3792,7 +3796,9 @@ CSGPolygon3D::Mode CSGPolygon3D::get_mode() const {
 void CSGPolygon3D::set_depth(const float p_depth) {
 	ERR_FAIL_COND(p_depth < 0.001);
 	depth = p_depth;
-	resize_brush_rework();
+	if (is_painted()) {
+		resize_brush_rework();
+	}
 	_make_painted();
 	update_gizmos();
 }
@@ -3924,7 +3930,9 @@ bool CSGPolygon3D::get_path_rotation_accurate() const {
 
 void CSGPolygon3D::set_path_local(bool p_enable) {
 	path_local = p_enable;
-	resize_brush_rework();
+	if (is_painted()) {
+		resize_brush_rework();
+	}
 	_make_painted();
 	update_gizmos();
 }
