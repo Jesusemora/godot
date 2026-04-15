@@ -33,7 +33,7 @@
 			<return type="void" />
 			<description>
 				Forces an update of the root csg shape visuals. When used on a root shape, it rebuilds the brush.
-				This is meant to be called after [code]set_csg_brush[/code].
+				This is meant to be called after [code]set_csg_brush[/code] in undo operations.
 			</description>
 		</method>
 		<method name="calculate_cube_map">
@@ -41,6 +41,7 @@
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Generates cube map UVs for the selected faces. This is a simple unwrapping that calculates the UVs based on the direction of the face.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="calculate_cylinder_map">
@@ -48,6 +49,7 @@
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Generates cylinder UVs for the selected faces. This is a simple unwrapping that calculates the side UVs based on the angle from the center.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="flip_x">
@@ -55,6 +57,7 @@
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Flips [param faces] in X.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="flip_y">
@@ -62,6 +65,7 @@
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Flips [param faces] in Y.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="get_all_csg_faces">
@@ -130,6 +134,7 @@
 			<param index="0" name="faces" type="PackedInt32Array" />
 			<description>
 				Returns the vertices used to generate the selected faces. This is intended for generating a mesh to display the selected faces in the editor.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="get_uv_offsets">
@@ -161,7 +166,7 @@
 		<method name="rebuild_brush">
 			<return type="void" />
 			<description>
-				Rebuilds the CSGBrush based on the properties of the CSG node. Overrides any changes to the faces or vertices. Internally sets [code]painted[/code] to false, unlocking features like CSGCylinder [code]sides[/code] that do not update when the brush is painted.
+				Rebuilds the CSGBrush based on the properties of the CSG node. Overrides any changes to the faces or vertices. Internally sets [code]painted[/code] to false.
 			</description>
 		</method>
 		<method name="resize_brush">
@@ -206,6 +211,7 @@
 			<param index="1" name="smooth" type="int" />
 			<description>
 				Sets the faces smoothing. A value of 0 will make the face flat while any value above will make it smooth. Faces of different brushes with the same smooth group will blend together.
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="set_face_material">
@@ -214,6 +220,7 @@
 			<param index="1" name="material" type="Material" />
 			<description>
 				Sets [param material] on [param faces].
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 			</description>
 		</method>
 		<method name="set_uv_offsets">
@@ -223,6 +230,7 @@
 			<param index="2" name="p_offset" type="Vector2" />
 			<description>
 				Sets the UVs of [param faces] of the CSGBrush using [param p_offset].
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 				Usage:
 				[code]
 				# Offset the first and second faces of CSGBrush.
@@ -238,6 +246,7 @@
 			<param index="2" name="p_scale" type="Vector2" />
 			<description>
 				Sets the UVs of [param faces] of the CSGBrush using [param p_scale].
+				[param faces]: must be a [PackedInt32Array] containing valid index of faces in the CSGBrush.
 				Usage:
 				[code]
 				# Scale the first and second faces of CSGBrush.
@@ -263,10 +272,10 @@
 			- [code]material_id[/code]: PackedByteArray with the id of the material assigned to each face. See [code]materials[/code].
 			- [code]vertices[/code]: [PackedVector3Array] containing the position of the triangles that make up the CSGBrush, must be divisible by 3.
 			- [code]uvs[/code]: [PackedVector2Array] containing the uv of the triangles of the CSGBrush, must be divisible by 3.
-			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. Currently [code]0[/code] disables the effect and any value above enables it.
+			- [code]smooth[/code]: PackedByteArray with the smoothing groups of the faces of the CSGBrush. A value of [code]0[/code] disables the effect and any value above enables it. Faces of different brushes with the same smooth group will blend together.
 			- [code]inverted[/code]: needed since flip_faces is a property of [CSGPrimitive3D] and not [CSGShape3D].
 			- [code]materials[/code]: [Array] of [Material] of the CSGBrush.
-			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush.
+			- [code]painted[/code]: when set to [code]true[/code], tells the engine not to rebuild the CSGBrush. Must always be true for this to work.
 			- [code]ngons[/code]: [PackedInt32Array] with the ngons assigned to each face.
 		</member>
 		<member name="autosmooth" type="bool" setter="set_autosmooth" getter="is_autosmooth" default="false">

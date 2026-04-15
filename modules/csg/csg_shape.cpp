@@ -976,7 +976,7 @@ void CSGShape3D::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_READY: {
-			// Trying to make the brush build only once all children are inside the tree.
+			// Build the brush build only once all children are inside the tree.
 			if (is_root_shape()) {
 				rebuild_brush();
 			}
@@ -1155,7 +1155,6 @@ Dictionary CSGShape3D::get_csg_brush() {
 
 	p_brush_data["vertices"] = vertices;
 	p_brush_data["uvs"] = uvs;
-	// Replace with smooth groups in the future.
 	p_brush_data["smooth"] = smooths;
 	// We will not save combined shapes.
 	p_brush_data["inverted"] = n->faces[0].invert;
@@ -1679,6 +1678,48 @@ bool CSGShape3D::resize_brush(const Vector3 &prev_size, const Vector3 &p_size) {
 		}
 	}
 	return true;
+}
+
+void CSGShape3D::resize_brush_rework() {
+	// Resizes the brush without lossing changes. Used for CSGTorus3D.
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	CSGBrush *n = _get_brush();
+	if (n == nullptr) {
+		return;
+	}
+
+	if (n->faces.is_empty()) {
+		return;
+	}
+
+	CSGBrush *b = _build_brush();
+
+	if (b->faces.size() != n->faces.size()) {
+		memdelete(b);
+		return;
+	}
+
+	AABB aabb;
+	if (b) {
+		if (!b->faces.is_empty()) {
+			aabb.position = b->faces[0].vertices[0];
+			for (const CSGBrush::Face &face : b->faces) {
+				for (int i = 0; i < 3; ++i) {
+					aabb.expand_to(face.vertices[i]);
+				}
+			}
+			for (int i = 0; i < n->faces.size(); i++) {
+				for (int j = 0; j < 3; j++) {
+					n->faces.write[i].vertices[j] = b->faces[i].vertices[j];
+				}
+			}
+		}
+		memdelete(b);
+	}
+	node_aabb = aabb;
 }
 
 void CSGShape3D::set_csg_invert(bool inv_val) {
@@ -2491,7 +2532,9 @@ float CSGSphere3D::get_radius() const {
 
 void CSGSphere3D::set_radial_segments(const int p_radial_segments) {
 	radial_segments = p_radial_segments > 4 ? p_radial_segments : 4;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -2501,7 +2544,9 @@ int CSGSphere3D::get_radial_segments() const {
 
 void CSGSphere3D::set_rings(const int p_rings) {
 	rings = p_rings > 1 ? p_rings : 1;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -2923,7 +2968,9 @@ float CSGCylinder3D::get_height() const {
 void CSGCylinder3D::set_sides(const int p_sides) {
 	ERR_FAIL_COND(p_sides < 3);
 	sides = p_sides;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -2933,7 +2980,9 @@ int CSGCylinder3D::get_sides() const {
 
 void CSGCylinder3D::set_cone(const bool p_cone) {
 	cone = p_cone;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3142,6 +3191,7 @@ void CSGTorus3D::_bind_methods() {
 
 void CSGTorus3D::set_inner_radius(const float p_inner_radius) {
 	inner_radius = p_inner_radius;
+	resize_brush_rework();
 	_make_painted();
 	update_gizmos();
 }
@@ -3152,6 +3202,7 @@ float CSGTorus3D::get_inner_radius() const {
 
 void CSGTorus3D::set_outer_radius(const float p_outer_radius) {
 	outer_radius = p_outer_radius;
+	resize_brush_rework();
 	_make_painted();
 	update_gizmos();
 }
@@ -3162,8 +3213,10 @@ float CSGTorus3D::get_outer_radius() const {
 
 void CSGTorus3D::set_sides(const int p_sides) {
 	ERR_FAIL_COND(p_sides < 3);
-	sides = p_sides;
-	_make_painted();
+	if (is_inside_tree()) {
+		sides = p_sides;
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3173,8 +3226,10 @@ int CSGTorus3D::get_sides() const {
 
 void CSGTorus3D::set_ring_sides(const int p_ring_sides) {
 	ERR_FAIL_COND(p_ring_sides < 3);
-	ring_sides = p_ring_sides;
-	_make_painted();
+	if (is_inside_tree()) {
+		ring_sides = p_ring_sides;
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3711,7 +3766,9 @@ void CSGPolygon3D::_bind_methods() {
 
 void CSGPolygon3D::set_polygon(const Vector<Vector2> &p_polygon) {
 	polygon = p_polygon;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3721,7 +3778,9 @@ Vector<Vector2> CSGPolygon3D::get_polygon() const {
 
 void CSGPolygon3D::set_mode(Mode p_mode) {
 	mode = p_mode;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 	notify_property_list_changed();
 }
@@ -3733,6 +3792,7 @@ CSGPolygon3D::Mode CSGPolygon3D::get_mode() const {
 void CSGPolygon3D::set_depth(const float p_depth) {
 	ERR_FAIL_COND(p_depth < 0.001);
 	depth = p_depth;
+	resize_brush_rework();
 	_make_painted();
 	update_gizmos();
 }
@@ -3743,7 +3803,9 @@ float CSGPolygon3D::get_depth() const {
 
 void CSGPolygon3D::set_path_continuous_u(bool p_enable) {
 	path_continuous_u = p_enable;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 }
 
 bool CSGPolygon3D::is_path_continuous_u() const {
@@ -3752,7 +3814,9 @@ bool CSGPolygon3D::is_path_continuous_u() const {
 
 void CSGPolygon3D::set_path_u_distance(real_t p_path_u_distance) {
 	path_u_distance = p_path_u_distance;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3763,7 +3827,9 @@ real_t CSGPolygon3D::get_path_u_distance() const {
 void CSGPolygon3D::set_spin_degrees(const float p_spin_degrees) {
 	ERR_FAIL_COND(p_spin_degrees < 0.01 || p_spin_degrees > 360);
 	spin_degrees = p_spin_degrees;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3774,7 +3840,9 @@ float CSGPolygon3D::get_spin_degrees() const {
 void CSGPolygon3D::set_spin_sides(int p_spin_sides) {
 	ERR_FAIL_COND(p_spin_sides < 3);
 	spin_sides = p_spin_sides;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3784,7 +3852,9 @@ int CSGPolygon3D::get_spin_sides() const {
 
 void CSGPolygon3D::set_path_node(const NodePath &p_path) {
 	path_node = p_path;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3794,7 +3864,9 @@ NodePath CSGPolygon3D::get_path_node() const {
 
 void CSGPolygon3D::set_path_interval_type(PathIntervalType p_interval_type) {
 	path_interval_type = p_interval_type;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3804,7 +3876,9 @@ CSGPolygon3D::PathIntervalType CSGPolygon3D::get_path_interval_type() const {
 
 void CSGPolygon3D::set_path_interval(float p_interval) {
 	path_interval = p_interval;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3814,7 +3888,9 @@ float CSGPolygon3D::get_path_interval() const {
 
 void CSGPolygon3D::set_path_simplify_angle(float p_angle) {
 	path_simplify_angle = p_angle;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3824,7 +3900,9 @@ float CSGPolygon3D::get_path_simplify_angle() const {
 
 void CSGPolygon3D::set_path_rotation(PathRotation p_rotation) {
 	path_rotation = p_rotation;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3834,7 +3912,9 @@ CSGPolygon3D::PathRotation CSGPolygon3D::get_path_rotation() const {
 
 void CSGPolygon3D::set_path_rotation_accurate(bool p_enabled) {
 	path_rotation_accurate = p_enabled;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
@@ -3844,6 +3924,7 @@ bool CSGPolygon3D::get_path_rotation_accurate() const {
 
 void CSGPolygon3D::set_path_local(bool p_enable) {
 	path_local = p_enable;
+	resize_brush_rework();
 	_make_painted();
 	update_gizmos();
 }
@@ -3854,7 +3935,9 @@ bool CSGPolygon3D::is_path_local() const {
 
 void CSGPolygon3D::set_path_joined(bool p_enable) {
 	path_joined = p_enable;
-	_make_painted();
+	if (is_inside_tree()) {
+		rebuild_brush();
+	}
 	update_gizmos();
 }
 
